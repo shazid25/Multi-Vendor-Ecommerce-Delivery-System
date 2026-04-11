@@ -389,6 +389,27 @@ exports.Prisma.EmailVerificationScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.BannerScalarFieldEnum = {
+  id: 'id',
+  image: 'image',
+  title: 'title',
+  link: 'link',
+  order: 'order',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.FAQScalarFieldEnum = {
+  id: 'id',
+  question: 'question',
+  answer: 'answer',
+  order: 'order',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -472,7 +493,9 @@ exports.Prisma.ModelName = {
   Session: 'Session',
   Verification: 'Verification',
   PasswordReset: 'PasswordReset',
-  EmailVerification: 'EmailVerification'
+  EmailVerification: 'EmailVerification',
+  Banner: 'Banner',
+  FAQ: 'FAQ'
 };
 
 /**

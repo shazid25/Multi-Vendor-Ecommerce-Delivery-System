@@ -6,18 +6,18 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Nexus — Multi-Vendor E-Commerce & Delivery",
-    template: "%s | Nexus",
+    default: "Green Mart — Your Fresh Grocery Delivery",
+    template: "%s | Green Mart",
   },
   description:
-    "Nexus is the ultimate multi-vendor marketplace connecting vendors, customers, and delivery partners. Shop smart, sell better, deliver faster.",
+    "Green Mart is your ultimate grocery delivery service connecting you with fresh produce and essentials. Shop fresh, eat healthy, deliver fast.",
   keywords: [
-    "e-commerce",
-    "multi-vendor",
-    "marketplace",
+    "grocery",
     "delivery",
-    "nexus",
-    "online shopping",
+    "fresh produce",
+    "green mart",
+    "online grocery",
+    "supermarket",
   ],
 };
 
@@ -46,3 +46,4 @@ export default function RootLayout({
     </html>
   );
 }
+

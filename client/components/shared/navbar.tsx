@@ -63,7 +63,7 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         scrolled
-          ? "nexus-glass-strong shadow-lg"
+          ? "mart-glass-strong shadow-lg"
           : "bg-background/80 backdrop-blur-md border-b border-border/50"
       )}
     >
@@ -73,12 +73,12 @@ export function Navbar() {
           <Link href="/" className="flex items-center gap-2 group">
             <motion.div
               whileHover={{ rotate: 15, scale: 1.1 }}
-              className="w-9 h-9 rounded-lg nexus-gradient-bg flex items-center justify-center shadow-lg"
+              className="w-9 h-9 rounded-lg mart-gradient-bg flex items-center justify-center shadow-lg"
             >
               <ShoppingBag className="w-5 h-5 text-white" />
             </motion.div>
-            <span className="text-xl font-bold nexus-gradient-text">
-              Nexus
+            <span className="text-xl font-bold mart-gradient-text">
+              Green Mart
             </span>
           </Link>
 
@@ -113,7 +113,7 @@ export function Navbar() {
                   onClick={() => setProfileOpen(!profileOpen)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full nexus-gradient-bg flex items-center justify-center text-white text-sm font-bold">
+                  <div className="w-8 h-8 rounded-full mart-gradient-bg flex items-center justify-center text-white text-sm font-bold">
                     {session.user.name?.[0]?.toUpperCase() || "U"}
                   </div>
                   <span className="hidden sm:block text-sm font-medium max-w-[100px] truncate">
@@ -241,3 +241,4 @@ export function Navbar() {
     </motion.nav>
   );
 }
+

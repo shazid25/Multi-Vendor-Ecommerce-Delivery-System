@@ -260,3 +260,4 @@ export function StatCard({ title, value, icon, trend, gradient }: StatCardProps)
     </TiltCard>
   );
 }
+

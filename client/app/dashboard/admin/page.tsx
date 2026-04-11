@@ -3,12 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
-import { BentoGrid, StatCard, GlassCard, PageTransition } from "@/components/shared/nexus-ui";
+import { BentoGrid, StatCard, GlassCard, PageTransition } from "@/components/shared/mart-ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { SkeletonDashboard } from "@/components/ui/skeleton";
-import { getRoleRequests, approveRoleRequest, rejectRoleRequest } from "@/app/actions/nexus-actions";
+import { getRoleRequests, approveRoleRequest, rejectRoleRequest } from "@/app/actions/mart-actions";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
                   <GlassCard className="p-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full nexus-gradient-bg flex items-center justify-center text-white font-bold">
+                        <div className="w-12 h-12 rounded-full mart-gradient-bg flex items-center justify-center text-white font-bold">
                           {(user?.name as string)?.[0]?.toUpperCase() || "U"}
                         </div>
                         <div>
@@ -172,3 +172,4 @@ export default function AdminDashboard() {
     </PageTransition>
   );
 }
+

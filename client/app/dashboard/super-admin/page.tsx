@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Users, DollarSign, ShoppingCart, Store, Truck, Shield, Trash2, Loader2 } from "lucide-react";
-import { BentoGrid, StatCard, GlassCard, PageTransition } from "@/components/shared/nexus-ui";
+import { BentoGrid, StatCard, GlassCard, PageTransition } from "@/components/shared/mart-ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { SkeletonDashboard } from "@/components/ui/skeleton";
-import { getGlobalAnalytics, getAllUsers, updateUserRole, deleteUser } from "@/app/actions/nexus-actions";
+import { getGlobalAnalytics, getAllUsers, updateUserRole, deleteUser } from "@/app/actions/mart-actions";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -63,9 +64,23 @@ export default function SuperAdminDashboard() {
   return (
     <PageTransition>
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold">Super Admin — God View 🔮</h1>
-          <p className="text-muted-foreground mt-1">Complete platform oversight and control</p>
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-bold">Super Admin — God View 🔮</h1>
+            <p className="text-muted-foreground mt-1">Complete platform oversight and control</p>
+          </div>
+          <div className="flex gap-4">
+            <Link href="/dashboard/super-admin/banners">
+              <Button variant="outline" className="gap-2">
+                <Store className="w-4 h-4" /> Banners
+              </Button>
+            </Link>
+            <Link href="/dashboard/super-admin/faqs">
+              <Button variant="outline" className="gap-2">
+                <Shield className="w-4 h-4" /> FAQs
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Global Stats */}
@@ -111,7 +126,7 @@ export default function SuperAdminDashboard() {
                   <TableRow key={user.id as string}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full nexus-gradient-bg flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full mart-gradient-bg flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                           {(user.name as string)?.[0]?.toUpperCase()}
                         </div>
                         <span className="font-medium text-sm">{user.name as string}</span>
@@ -160,3 +175,4 @@ export default function SuperAdminDashboard() {
     </PageTransition>
   );
 }
+

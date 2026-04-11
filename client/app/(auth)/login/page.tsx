@@ -131,10 +131,10 @@ export default function LoginPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
-              <div className="w-12 h-12 rounded-2xl nexus-gradient-bg flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 rounded-2xl mart-gradient-bg flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                 <ShoppingBag className="w-6 h-6 text-white" />
               </div>
-              <span className="text-3xl font-black nexus-gradient-text tracking-tighter">NEXUS</span>
+              <span className="text-3xl font-black mart-gradient-text tracking-tighter">GREEN MART</span>
             </Link>
             <h1 className="text-3xl font-extrabold text-white tracking-tight">
               {isRegister ? "Start Your Journey" : "Welcome Back"}
@@ -261,7 +261,7 @@ export default function LoginPage() {
                 <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
                 <>
-                  {isRegister ? "Create Premium Account" : "Sign In to Nexus"}
+                  {isRegister ? "Create Premium Account" : "Sign In to Green Mart"}
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </>
               )}
@@ -276,7 +276,7 @@ export default function LoginPage() {
               {isRegister ? (
                 <>Already have an account? <span className="text-blue-400 font-bold">Sign In</span></>
               ) : (
-                <>New to NEXUS? <span className="text-blue-400 font-bold">Create Account</span></>
+                <>New to GREEN MART? <span className="text-blue-400 font-bold">Create Account</span></>
               )}
             </button>
           </div>
@@ -285,3 +285,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

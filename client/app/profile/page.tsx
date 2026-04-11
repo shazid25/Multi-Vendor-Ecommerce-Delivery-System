@@ -17,8 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GlassCard, PageTransition } from "@/components/shared/nexus-ui";
-import { updateUserProfile, updateUserRole } from "@/app/actions/nexus-actions";
+import { GlassCard, PageTransition } from "@/components/shared/mart-ui";
+import { updateUserProfile, updateUserRole } from "@/app/actions/mart-actions";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -93,8 +93,8 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto space-y-8 pb-20">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight nexus-gradient-text">Account Settings</h1>
-            <p className="text-muted-foreground mt-1">Manage your identity and role on the Nexus platform.</p>
+            <h1 className="text-4xl font-bold tracking-tight mart-gradient-text">Account Settings</h1>
+            <p className="text-muted-foreground mt-1">Manage your identity and role on the Green Mart platform.</p>
           </div>
         </div>
 
@@ -103,7 +103,7 @@ export default function ProfilePage() {
           <div className="lg:col-span-1 space-y-6">
             <GlassCard className="p-8 text-center">
               <div className="relative inline-block group mb-6">
-                <div className="w-32 h-32 rounded-3xl nexus-gradient-bg flex items-center justify-center text-4xl font-bold text-white shadow-2xl relative overflow-hidden">
+                <div className="w-32 h-32 rounded-3xl mart-gradient-bg flex items-center justify-center text-4xl font-bold text-white shadow-2xl relative overflow-hidden">
                   {user.image ? (
                     <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
                   ) : (
@@ -242,3 +242,4 @@ export default function ProfilePage() {
     </PageTransition>
   );
 }
+

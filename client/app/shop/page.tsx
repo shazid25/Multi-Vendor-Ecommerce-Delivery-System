@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TiltCard, PageTransition } from "@/components/shared/nexus-ui";
-import { getProducts } from "@/app/actions/nexus-actions";
+import { TiltCard, PageTransition } from "@/components/shared/mart-ui";
+import { getProducts } from "@/app/actions/mart-actions";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -48,7 +48,7 @@ export default function ShopPage() {
               animate={{ opacity: 1, y: 0 }}
               className="text-4xl md:text-5xl font-bold mb-4"
             >
-              Explore <span className="nexus-gradient-text">Products</span>
+              Explore <span className="mart-gradient-text">Products</span>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -211,3 +211,4 @@ export default function ShopPage() {
     </PageTransition>
   );
 }
+

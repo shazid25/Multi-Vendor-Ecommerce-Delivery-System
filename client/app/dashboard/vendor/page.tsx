@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Package, DollarSign, ShoppingCart, TrendingUp, Truck, Plus, Loader2, Check } from "lucide-react";
-import { BentoGrid, StatCard, GlassCard, PageTransition } from "@/components/shared/nexus-ui";
+import { BentoGrid, StatCard, GlassCard, PageTransition } from "@/components/shared/mart-ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import {
   acceptOrder,
   getAvailableDeliveryPartners,
   assignDeliveryPartner,
-} from "@/app/actions/nexus-actions";
+} from "@/app/actions/mart-actions";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth-client";
@@ -250,3 +250,4 @@ export default function VendorDashboard() {
     </PageTransition>
   );
 }
+

@@ -1,4 +1,4 @@
-// Nexus - Multi-Vendor E-Commerce & Delivery Management System
+// Green Mart - Multi-Vendor E-Commerce & Delivery Management System
 // Production-ready Prisma Schema with role-based workflows and financial tracking
 
 generator client {
@@ -545,4 +545,29 @@ model EmailVerification {
   createdAt             DateTime  @default(now())
 
   @@index([email])
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  image     String
+  title     String?
+  link      String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model FAQ {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
 }

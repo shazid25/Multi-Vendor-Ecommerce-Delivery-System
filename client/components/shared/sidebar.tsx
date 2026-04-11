@@ -86,16 +86,16 @@ export function DashboardSidebar() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg nexus-gradient-bg flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg mart-gradient-bg flex items-center justify-center flex-shrink-0">
             <Store className="w-4 h-4 text-white" />
           </div>
           {!collapsed && (
             <motion.span
               initial={{ opacity: 0, width: 0 }}
               animate={{ opacity: 1, width: "auto" }}
-              className="font-bold nexus-gradient-text text-lg whitespace-nowrap"
+              className="font-bold mart-gradient-text text-lg whitespace-nowrap"
             >
-              Nexus
+              Green Mart
             </motion.span>
           )}
         </Link>
@@ -116,7 +116,7 @@ export function DashboardSidebar() {
       {!collapsed && (
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full nexus-gradient-bg flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+            <div className="w-10 h-10 rounded-full mart-gradient-bg flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
               {session?.user?.name?.[0]?.toUpperCase() || "U"}
             </div>
             <div className="min-w-0">
@@ -232,3 +232,4 @@ export function DashboardSidebar() {
     </>
   );
 }
+

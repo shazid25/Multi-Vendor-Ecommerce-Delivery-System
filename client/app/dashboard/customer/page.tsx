@@ -3,12 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ShoppingCart, DollarSign, Package, UserPlus, Clock, ChevronRight } from "lucide-react";
-import { BentoGrid, StatCard, GlassCard, AnimatedTimeline, PageTransition } from "@/components/shared/nexus-ui";
+import { BentoGrid, StatCard, GlassCard, AnimatedTimeline, PageTransition } from "@/components/shared/mart-ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SkeletonDashboard } from "@/components/ui/skeleton";
 import { useSession } from "@/lib/auth-client";
-import { getCustomerStats, getOrders } from "@/app/actions/nexus-actions";
+import { getCustomerStats, getOrders } from "@/app/actions/mart-actions";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -170,7 +170,7 @@ export default function CustomerDashboard() {
           <GlassCard className="p-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold">Want to earn with Nexus?</h2>
+                <h2 className="text-lg font-semibold">Want to earn with Green Mart?</h2>
                 <p className="text-muted-foreground text-sm mt-1">Apply to become a Vendor or Delivery Partner</p>
               </div>
               <Link href="/dashboard/customer/become-partner">
@@ -186,3 +186,4 @@ export default function CustomerDashboard() {
     </PageTransition>
   );
 }
+

@@ -13,13 +13,13 @@ export function Footer() {
           {/* Brand */}
           <div className="md:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 rounded-lg nexus-gradient-bg flex items-center justify-center">
+              <div className="w-9 h-9 rounded-lg mart-gradient-bg flex items-center justify-center">
                 <ShoppingBag className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold nexus-gradient-text">Nexus</span>
+              <span className="text-xl font-bold mart-gradient-text">Green Mart</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-md">
-              The ultimate multi-vendor marketplace connecting vendors, customers, and delivery partners in one seamless platform.
+              The ultimate grocery delivery service connecting you with fresh produce and essentials in one seamless platform.
             </p>
           </div>
 
@@ -67,10 +67,11 @@ export function Footer() {
 
         <div className="border-t border-border mt-8 pt-8 text-center">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Nexus. Built with Next.js & Prisma.
+            © {new Date().getFullYear()} Green Mart. Built with Next.js & Prisma.
           </p>
         </div>
       </div>
     </footer>
   );
 }
+

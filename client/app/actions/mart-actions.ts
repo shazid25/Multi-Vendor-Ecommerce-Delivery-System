@@ -384,7 +384,7 @@ export async function placeOrder(data: {
       const shippingCharge = data.city.toLowerCase().includes("dhaka") ? 80 : 120;
       const totalAmount = subtotal + shippingCharge;
 
-      const orderNumber = `NEX-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const orderNumber = `MART-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
       const zone = data.city.toLowerCase().includes("dhaka") ? "DHAKA" : "OUTSIDE_DHAKA";
 
       // Create order
@@ -643,14 +643,14 @@ export async function markAsDelivered(orderId: string) {
         });
       }
 
-      // 4. Platform revenue (Note: Transaction model is used instead of non-existent platformRevenue)
+      // 4. Platform revenue
       const totalCommission = order.vendorOrders.reduce((sum, vo) => sum + vo.commissionAmount, 0);
       await tx.transaction.create({
         data: {
           orderId: order.id,
           amount: totalCommission,
           type: "PLATFORM_COMMISSION",
-          userId: order.userId, // Default to customer or admin
+          userId: order.userId,
           description: `Commission for order #${order.orderNumber}`,
         },
       });
@@ -728,7 +728,6 @@ export async function updateUserRole(userId: string, role: string) {
       data: { role: role as any },
     });
 
-    // Side effect: Create profile if role is VENDOR or DELIVERY_PARTNER and doesn't exist
     if (role === "VENDOR") {
       const vendor = await prisma.vendor.findUnique({ where: { userId } });
       if (!vendor) {
@@ -803,10 +802,6 @@ export async function getGlobalAnalytics() {
       prisma.order.count(),
     ]);
 
-    const platformRevenue = await prisma.platformRevenue.aggregate({
-      _sum: { amount: true },
-    });
-
     const totalSpent = await prisma.user.aggregate({
       _sum: { totalSpent: true },
     });
@@ -824,7 +819,6 @@ export async function getGlobalAnalytics() {
         totalVendors,
         totalDeliveryPartners,
         totalOrders,
-        platformRevenue: platformRevenue._sum.amount || 0,
         totalCustomerSpend: totalSpent._sum.totalSpent || 0,
         recentOrders,
       },
@@ -880,7 +874,6 @@ export async function getDeliveryPartnerStats() {
       }),
     ]);
 
-    // Calculate today's earnings (sum of shipping charges for today's deliveries)
     const todayEarnings = await prisma.order.aggregate({
       where: { deliveryAssignment: { deliveryPartnerId: dp.id }, status: "DELIVERED", updatedAt: { gte: todayStart } },
       _sum: { shippingCharge: true },
@@ -968,6 +961,150 @@ export async function getCustomerStats() {
     };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to fetch stats";
+    return { success: false, error: message };
+  }
+}
+
+// ─── Banner Actions ─────────────────────────────────────────────────────────
+
+export async function getBanners() {
+  try {
+    const banners = await prisma.banner.findMany({
+      where: { isActive: true },
+      orderBy: { order: "asc" },
+    });
+    return { success: true, data: banners };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to fetch banners";
+    return { success: false, error: message };
+  }
+}
+
+export async function getAllBanners() {
+  const session = await getSession();
+  if (session?.user?.role !== "SUPER_ADMIN") return { success: false, error: "Unauthorized" };
+
+  try {
+    const banners = await prisma.banner.findMany({
+      orderBy: { order: "asc" },
+    });
+    return { success: true, data: banners };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to fetch banners";
+    return { success: false, error: message };
+  }
+}
+
+export async function createBanner(data: { image: string; title?: string; link?: string; order?: number }) {
+  const session = await getSession();
+  if (session?.user?.role !== "SUPER_ADMIN") return { success: false, error: "Unauthorized" };
+
+  try {
+    const banner = await prisma.banner.create({ data });
+    revalidatePath("/");
+    return { success: true, data: banner };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to create banner";
+    return { success: false, error: message };
+  }
+}
+
+export async function updateBanner(id: string, data: Partial<{ image: string; title: string; link: string; order: number; isActive: boolean }>) {
+  const session = await getSession();
+  if (session?.user?.role !== "SUPER_ADMIN") return { success: false, error: "Unauthorized" };
+
+  try {
+    const banner = await prisma.banner.update({ where: { id }, data });
+    revalidatePath("/");
+    return { success: true, data: banner };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to update banner";
+    return { success: false, error: message };
+  }
+}
+
+export async function deleteBanner(id: string) {
+  const session = await getSession();
+  if (session?.user?.role !== "SUPER_ADMIN") return { success: false, error: "Unauthorized" };
+
+  try {
+    await prisma.banner.delete({ where: { id } });
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to delete banner";
+    return { success: false, error: message };
+  }
+}
+
+// ─── FAQ Actions ────────────────────────────────────────────────────────────
+
+export async function getFAQs() {
+  try {
+    const faqs = await prisma.fAQ.findMany({
+      where: { isActive: true },
+      orderBy: { order: "asc" },
+    });
+    return { success: true, data: faqs };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to fetch FAQs";
+    return { success: false, error: message };
+  }
+}
+
+export async function getAllFAQs() {
+  const session = await getSession();
+  if (session?.user?.role !== "SUPER_ADMIN") return { success: false, error: "Unauthorized" };
+
+  try {
+    const faqs = await prisma.fAQ.findMany({
+      orderBy: { order: "asc" },
+    });
+    return { success: true, data: faqs };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to fetch FAQs";
+    return { success: false, error: message };
+  }
+}
+
+export async function createFAQ(data: { question: string; answer: string; order?: number }) {
+  const session = await getSession();
+  if (session?.user?.role !== "SUPER_ADMIN") return { success: false, error: "Unauthorized" };
+
+  try {
+    const faq = await prisma.fAQ.create({ data });
+    revalidatePath("/");
+    return { success: true, data: faq };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to create FAQ";
+    return { success: false, error: message };
+  }
+}
+
+export async function updateFAQ(id: string, data: Partial<{ question: string; answer: string; order: number; isActive: boolean }>) {
+  const session = await getSession();
+  if (session?.user?.role !== "SUPER_ADMIN") return { success: false, error: "Unauthorized" };
+
+  try {
+    const faq = await prisma.fAQ.update({ where: { id }, data });
+    revalidatePath("/");
+    return { success: true, data: faq };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to update FAQ";
+    return { success: false, error: message };
+  }
+}
+
+export async function deleteFAQ(id: string) {
+  const session = await getSession();
+  if (session?.user?.role !== "SUPER_ADMIN") return { success: false, error: "Unauthorized" };
+
+  try {
+    await prisma.fAQ.delete({ where: { id } });
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to delete FAQ";
     return { success: false, error: message };
   }
 }
