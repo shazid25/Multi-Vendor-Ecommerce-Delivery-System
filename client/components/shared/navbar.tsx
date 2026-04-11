@@ -177,7 +177,7 @@ export function Navbar() {
                     Sign in
                   </Button>
                 </Link>
-                <Link href="/register">
+                <Link href="/login?mode=register">
                   <Button variant="gradient" size="sm">
                     Get Started
                   </Button>
@@ -227,7 +227,7 @@ export function Navbar() {
                       Sign in
                     </Button>
                   </Link>
-                  <Link href="/register">
+                  <Link href="/login?mode=register">
                     <Button variant="gradient" className="w-full" size="sm">
                       Get Started
                     </Button>

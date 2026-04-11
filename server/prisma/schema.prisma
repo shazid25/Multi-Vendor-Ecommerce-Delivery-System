@@ -3,10 +3,12 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ==================== ENUMS ====================
@@ -76,14 +78,16 @@ model User {
   image                 String?
   phone                 String?
   role                  UserRole  @default(CUSTOMER)
-  provider              AuthProvider @default(EMAIL)
-  emailVerified         DateTime?
-  rememberMe            Boolean   @default(false)
+  emailVerified         Boolean   @default(false)
   lastLogin             DateTime?
   isActive              Boolean   @default(true)
   
   // Customer financial tracking
   totalSpent            Float     @default(0)
+  
+  // Better Auth Relations
+  accounts              Account[]
+  sessions              Session[]
   
   // Super Admin financial tracking
   platformBalance       Float     @default(0)
@@ -96,6 +100,7 @@ model User {
   deliveryPartner       DeliveryPartner?
   roleRequests          RoleRequest[]
   transactions          Transaction[]
+  notifications         Notification[]
   
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
@@ -444,7 +449,81 @@ model Address {
   @@index([userId])
 }
 
+// ==================== PLATFORM & NOTIFICATIONS ====================
+
+model PlatformRevenue {
+  id                    String    @id @default(cuid())
+  orderId               String
+  amount                Float
+  type                  String    @default("commission") // commission, fee
+  createdAt             DateTime  @default(now())
+
+  @@index([orderId])
+}
+
+model Notification {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                 String
+  message               String
+  type                  String    @default("info") // info, success, warning, error
+  isRead                Boolean   @default(false)
+  link                  String?
+  createdAt             DateTime  @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
 // ==================== AUTH & SECURITY ====================
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([identifier])
+}
 
 model PasswordReset {
   id                    String    @id @default(cuid())

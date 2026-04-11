@@ -1,8 +1,10 @@
-// Nexus — Multi-Vendor E-Commerce & Delivery Platform
-// Prisma Schema v2.0
+// Nexus - Multi-Vendor E-Commerce & Delivery Management System
+// Production-ready Prisma Schema with role-based workflows and financial tracking
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+  output   = "../generated/client"
 }
 
 datasource db {
@@ -10,7 +12,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Enums ───────────────────────────────────────────────────────────────────
+// ==================== ENUMS ====================
 
 enum UserRole {
   CUSTOMER
@@ -20,34 +22,462 @@ enum UserRole {
   SUPER_ADMIN
 }
 
-enum RequestStatus {
+// enum AuthProvider {
+//   EMAIL
+//   GOOGLE
+//   GITHUB
+// }
+
+enum RoleRequestStatus {
   PENDING
   APPROVED
   REJECTED
 }
 
-enum RequestType {
+enum RoleRequestType {
   VENDOR
   DELIVERY_PARTNER
 }
 
 enum OrderStatus {
   PENDING
-  ACCEPTED
-  ASSIGNED
-  IN_TRANSIT
+  CONFIRMED
+  SHIPPED
   DELIVERED
   CANCELLED
+  RETURNED
 }
 
 enum PaymentStatus {
   PENDING
-  PAID
+  COMPLETED
   FAILED
   REFUNDED
 }
 
-// ─── Better Auth Required Models ─────────────────────────────────────────────
+enum DeliveryStatus {
+  ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum LocationZone {
+  DHAKA
+  OUTSIDE_DHAKA
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  name                  String
+  password              String?
+  image                 String?
+  phone                 String?
+  role                  UserRole  @default(CUSTOMER)
+  emailVerified         Boolean   @default(false)
+  lastLogin             DateTime?
+  isActive              Boolean   @default(true)
+  
+  // Customer financial tracking
+  totalSpent            Float     @default(0)
+  
+  // Better Auth Relations
+  accounts              Account[]
+  sessions              Session[]
+  
+  // Super Admin financial tracking
+  platformBalance       Float     @default(0)
+  totalPlatformRevenue  Float     @default(0)
+  
+  // Relations
+  addresses             Address[]
+  orders                Order[]
+  vendor                Vendor?
+  deliveryPartner       DeliveryPartner?
+  roleRequests          RoleRequest[]
+  transactions          Transaction[]
+  notifications         Notification[]
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+}
+
+// ==================== ROLE REQUEST SYSTEM ====================
+
+model RoleRequest {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  requestType           RoleRequestType
+  status                RoleRequestStatus @default(PENDING)
+  
+  // Vendor-specific fields
+  shopName              String?
+  shopDescription       String?
+  businessType          String?
+  shopImage             String?
+  phoneNumber           String?
+  
+  // Delivery Partner-specific fields
+  vehicleType           String?
+  licenseNumber         String?
+  licenseExpiry         DateTime?
+  nidNumber             String?
+  nidImage              String?
+  
+  // Admin review
+  reviewedBy            String?
+  reviewedAt            DateTime?
+  rejectionReason       String?
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([requestType])
+}
+
+// ==================== VENDOR MODEL ====================
+
+model Vendor {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  shopName              String
+  shopDescription       String?
+  shopImage             String?
+  shopBanner            String?
+  phoneNumber           String
+  businessType          String
+  
+  // Financial
+  balance               Float     @default(0)
+  totalSales            Float     @default(0)
+  platformCommission    Float     @default(10) // Percentage
+  
+  // Bank details
+  bankAccountName       String?
+  bankAccountNumber     String?
+  bankName              String?
+  routingNumber         String?
+  
+  // Status
+  isVerified            Boolean   @default(false)
+  isActive              Boolean   @default(true)
+  rating                Float     @default(5.0)
+  totalOrders           Int       @default(0)
+  
+  // Relations
+  products              Product[]
+  orders                VendorOrder[]
+  deliveryAssignments   DeliveryAssignment[]
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([isVerified])
+}
+
+// ==================== DELIVERY PARTNER MODEL ====================
+
+model DeliveryPartner {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  phoneNumber           String
+  vehicleType           String
+  licenseNumber         String
+  licenseExpiry         DateTime
+  nidNumber             String
+  nidImage              String?
+  
+  // Financial
+  totalEarnings         Float     @default(0)
+  availableBalance      Float     @default(0)
+  totalDeliveries       Int       @default(0)
+  
+  // Status
+  isVerified            Boolean   @default(false)
+  isActive              Boolean   @default(true)
+  isAvailable           Boolean   @default(true)
+  rating                Float     @default(5.0)
+  
+  // Relations
+  deliveries            Delivery[]
+  deliveryAssignments   DeliveryAssignment[]
+  earnings              DeliveryEarning[]
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([isVerified])
+  @@index([isAvailable])
+}
+
+// ==================== PRODUCT & INVENTORY ====================
+
+model Product {
+  id                    String    @id @default(cuid())
+  vendorId              String
+  vendor                Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  
+  name                  String
+  description           String
+  price                 Float
+  discountPrice         Float?
+  image                 String?
+  images                String[]  @default([])
+  category              String
+  stock                 Int       @default(0)
+  isActive              Boolean   @default(true)
+  
+  // Analytics
+  totalSold             Int       @default(0)
+  rating                Float     @default(5.0)
+  
+  // Relations
+  orderItems            OrderItem[]
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([vendorId])
+  @@index([category])
+  @@index([isActive])
+}
+
+// ==================== ORDER MANAGEMENT ====================
+
+model Order {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  orderNumber           String    @unique
+  
+  // Shipping
+  shippingAddress       String
+  city                  String
+  zone                  LocationZone // Dhaka or Outside Dhaka
+  shippingCharge        Float     // 80 BDT for Dhaka, 120 BDT for Outside
+  
+  // Financial
+  subtotal              Float
+  totalAmount           Float
+  platformCommission    Float     @default(0)
+  
+  // Status
+  status                OrderStatus @default(PENDING)
+  paymentStatus         PaymentStatus @default(PENDING)
+  
+  // Delivery assignment (vendor assigns a delivery partner)
+  deliveryAssignmentId  String?
+  deliveryAssignment    DeliveryAssignment?
+  
+  // Relations
+  items                 OrderItem[]
+  delivery              Delivery?
+  vendorOrders          VendorOrder[]
+  transactions          Transaction[]
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id                    String    @id @default(cuid())
+  orderId               String
+  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId             String
+  product               Product   @relation(fields: [productId], references: [id])
+  
+  quantity              Int
+  price                 Float
+  subtotal              Float
+  
+  createdAt             DateTime  @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model VendorOrder {
+  id                    String    @id @default(cuid())
+  orderId               String
+  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  vendorId              String
+  vendor                Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  
+  vendorAmount          Float
+  commissionAmount      Float
+  status                OrderStatus @default(PENDING)
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([orderId, vendorId])
+  @@index([orderId])
+  @@index([vendorId])
+}
+
+// ==================== DELIVERY & LOGISTICS ====================
+
+model DeliveryAssignment {
+  id                    String    @id @default(cuid())
+  orderId               String    @unique
+  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  vendorId              String
+  vendor                Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  
+  deliveryPartnerId     String
+  deliveryPartner       DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id])
+  
+  assignedAt            DateTime  @default(now())
+  
+  // Relations
+  delivery              Delivery?
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([vendorId])
+  @@index([deliveryPartnerId])
+}
+
+model Delivery {
+  id                    String    @id @default(cuid())
+  orderId               String    @unique
+  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  assignmentId          String    @unique
+  assignment            DeliveryAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  
+  deliveryPartnerId     String
+  deliveryPartner       DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id])
+  
+  status                DeliveryStatus @default(ASSIGNED)
+  pickupTime            DateTime?
+  deliveryTime          DateTime?
+  rating                Float?
+  feedback              String?
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([deliveryPartnerId])
+  @@index([status])
+}
+
+// ==================== FINANCIAL TRACKING ====================
+
+model DeliveryEarning {
+  id                    String    @id @default(cuid())
+  deliveryPartnerId     String
+  deliveryPartner       DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id], onDelete: Cascade)
+  
+  orderId               String
+  amount                Float     // Shipping charge (80 or 120 BDT)
+  earnedAt              DateTime  @default(now())
+  
+  createdAt             DateTime  @default(now())
+
+  @@index([deliveryPartnerId])
+  @@index([earnedAt])
+}
+
+model Transaction {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  orderId               String?
+  order                 Order?    @relation(fields: [orderId], references: [id])
+  
+  type                  String    // VENDOR_INCOME, DELIVERY_INCOME, PLATFORM_COMMISSION, CUSTOMER_PAYMENT
+  amount                Float
+  description           String?
+  
+  createdAt             DateTime  @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ==================== ADDRESS & USER DATA ====================
+
+model Address {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  street                String
+  city                  String
+  state                 String
+  postalCode            String
+  country               String
+  phone                 String?
+  isDefault             Boolean   @default(false)
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+// ==================== PLATFORM & NOTIFICATIONS ====================
+
+model PlatformRevenue {
+  id                    String    @id @default(cuid())
+  orderId               String
+  amount                Float
+  type                  String    @default("commission") // commission, fee
+  createdAt             DateTime  @default(now())
+
+  @@index([orderId])
+}
+
+model Notification {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                 String
+  message               String
+  type                  String    @default("info") // info, success, warning, error
+  isRead                Boolean   @default(false)
+  link                  String?
+  createdAt             DateTime  @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+// ==================== AUTH & SECURITY ====================
 
 model Account {
   id                    String    @id @default(cuid())
@@ -96,281 +526,24 @@ model Verification {
   @@index([identifier])
 }
 
-// ─── Core User ───────────────────────────────────────────────────────────────
-
-model User {
-  id            String   @id @default(cuid())
-  name          String
-  email         String   @unique
-  emailVerified Boolean  @default(false)
-  image         String?
-  role          UserRole @default(CUSTOMER)
-  totalSpent    Float    @default(0)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Better Auth
-  accounts    Account[]
-  sessions    Session[]
-
-  // Business relations
-  vendor          Vendor?
-  deliveryPartner DeliveryPartner?
-  orders          Order[]
-  addresses       Address[]
-  roleRequests    RoleRequest[]
-  notifications   Notification[]
+model PasswordReset {
+  id                    String    @id @default(cuid())
+  email                 String
+  token                 String    @unique
+  expiresAt             DateTime
+  
+  createdAt             DateTime  @default(now())
 
   @@index([email])
-  @@index([role])
 }
 
-// ─── Role Request System ─────────────────────────────────────────────────────
+model EmailVerification {
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  token                 String    @unique
+  expiresAt             DateTime
+  
+  createdAt             DateTime  @default(now())
 
-model RoleRequest {
-  id        String        @id @default(cuid())
-  userId    String
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      RequestType
-  status    RequestStatus @default(PENDING)
-
-  // Vendor fields
-  shopName        String?
-  shopDescription String?
-  businessType    String?
-  phoneNumber     String?
-  bankName        String?
-  bankAccountName String?
-  bankAccountNumber String?
-
-  // Delivery Partner fields
-  vehicleType   String?
-  licenseNumber String?
-  nidNumber     String?
-  nidImage      String?
-
-  adminNote String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@index([status])
-  @@index([type])
-}
-
-// ─── Vendor ──────────────────────────────────────────────────────────────────
-
-model Vendor {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  shopName          String
-  shopDescription   String?
-  shopImage         String?
-  shopBanner        String?
-  phoneNumber       String
-  businessType      String
-  bankAccountName   String?
-  bankAccountNumber String?
-  bankName          String?
-
-  balance            Float @default(0)
-  totalEarnings      Float @default(0)
-  platformCommission Float @default(10) // percentage
-
-  isVerified Boolean @default(true)
-  isActive   Boolean @default(true)
-
-  products  Product[]
-  orders    VendorOrder[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-}
-
-// ─── Delivery Partner ────────────────────────────────────────────────────────
-
-model DeliveryPartner {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  phoneNumber    String
-  vehicleType    String
-  licenseNumber  String
-  nidNumber      String?
-  nidImage       String?
-
-  isVerified      Boolean @default(true)
-  isActive        Boolean @default(true)
-  isAvailable     Boolean @default(true)
-  rating          Float   @default(5.0)
-  totalDeliveries Int     @default(0)
-  totalEarnings   Float   @default(0)
-
-  deliveries Order[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@index([isVerified, isAvailable])
-}
-
-// ─── Products ────────────────────────────────────────────────────────────────
-
-model Product {
-  id       String @id @default(cuid())
-  vendorId String
-  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-
-  name          String
-  description   String
-  price         Float
-  discountPrice Float?
-  image         String?
-  images        String[] @default([])
-  category      String
-  tags          String[] @default([])
-  stock         Int      @default(0)
-  rating        Float    @default(0)
-  totalSold     Int      @default(0)
-  isActive      Boolean  @default(true)
-
-  orderItems OrderItem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([vendorId])
-  @@index([category])
-  @@index([isActive])
-}
-
-// ─── Orders ──────────────────────────────────────────────────────────────────
-
-model Order {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  orderNumber     String      @unique @default(cuid())
-  totalAmount     Float
-  subtotal        Float
-  shippingCharge  Float       @default(80) // 80 = Dhaka, 120 = Outside Dhaka
-  city            String      // Used to determine shipping charge
-  shippingAddress String
-  status          OrderStatus @default(PENDING)
-  paymentStatus   PaymentStatus @default(PENDING)
-  stripePaymentId String?
-
-  // Delivery assignment (set by Vendor)
-  deliveryPartnerId String?
-  deliveryPartner   DeliveryPartner? @relation(fields: [deliveryPartnerId], references: [id])
-
-  deliveredAt DateTime?
-
-  items        OrderItem[]
-  vendorOrders VendorOrder[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@index([status])
-  @@index([deliveryPartnerId])
-}
-
-model OrderItem {
-  id      String @id @default(cuid())
-  orderId String
-  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-
-  quantity Int
-  price    Float
-  subtotal Float
-
-  createdAt DateTime @default(now())
-
-  @@index([orderId])
-  @@index([productId])
-}
-
-model VendorOrder {
-  id      String @id @default(cuid())
-  orderId String
-  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  vendorId String
-  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-
-  subtotal   Float
-  commission Float
-  vendorEarning Float
-  status     OrderStatus @default(PENDING)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([orderId])
-  @@index([vendorId])
-}
-
-// ─── Platform Revenue ────────────────────────────────────────────────────────
-
-model PlatformRevenue {
-  id      String @id @default(cuid())
-  orderId String
-  amount  Float
-  type    String @default("commission") // commission, fee
-
-  createdAt DateTime @default(now())
-
-  @@index([orderId])
-}
-
-// ─── Address ─────────────────────────────────────────────────────────────────
-
-model Address {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  street     String
-  city       String
-  state      String
-  postalCode String
-  country    String  @default("Bangladesh")
-  isDefault  Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-}
-
-// ─── Notifications ────────────────────────────────────────────────────────────
-
-model Notification {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  title   String
-  message String
-  type    String  @default("info") // info, success, warning, error
-  isRead  Boolean @default(false)
-  link    String?
-
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-  @@index([isRead])
+  @@index([email])
 }

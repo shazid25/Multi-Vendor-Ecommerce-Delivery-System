@@ -37,14 +37,11 @@ export async function submitVendorRequest(data: {
     const request = await prisma.roleRequest.create({
       data: {
         userId: session.user.id,
-        type: "VENDOR",
+        requestType: "VENDOR",
         shopName: data.shopName,
         shopDescription: data.shopDescription,
         businessType: data.businessType,
         phoneNumber: data.phoneNumber,
-        bankName: data.bankName,
-        bankAccountName: data.bankAccountName,
-        bankAccountNumber: data.bankAccountNumber,
       },
     });
 
@@ -74,7 +71,7 @@ export async function submitDeliveryRequest(data: {
     const request = await prisma.roleRequest.create({
       data: {
         userId: session.user.id,
-        type: "DELIVERY_PARTNER",
+        requestType: "DELIVERY_PARTNER",
         phoneNumber: data.phoneNumber,
         vehicleType: data.vehicleType,
         licenseNumber: data.licenseNumber,
@@ -120,18 +117,22 @@ export async function approveRoleRequest(requestId: string) {
       // 1. Update request status
       await tx.roleRequest.update({
         where: { id: requestId },
-        data: { status: "APPROVED", adminNote: `Approved by ${session.user.name}` },
+        data: { 
+          status: "APPROVED", 
+          reviewedBy: session.user.id,
+          reviewedAt: new Date(),
+        },
       });
 
       // 2. Update user role
-      const newRole = roleRequest.type === "VENDOR" ? "VENDOR" : "DELIVERY_PARTNER";
+      const newRole = roleRequest.requestType === "VENDOR" ? "VENDOR" : "DELIVERY_PARTNER";
       await tx.user.update({
         where: { id: roleRequest.userId },
         data: { role: newRole as "VENDOR" | "DELIVERY_PARTNER" },
       });
 
       // 3. Create profile
-      if (roleRequest.type === "VENDOR") {
+      if (roleRequest.requestType === "VENDOR") {
         await tx.vendor.create({
           data: {
             userId: roleRequest.userId,
@@ -139,9 +140,6 @@ export async function approveRoleRequest(requestId: string) {
             phoneNumber: roleRequest.phoneNumber || "",
             businessType: roleRequest.businessType || "General",
             shopDescription: roleRequest.shopDescription,
-            bankName: roleRequest.bankName,
-            bankAccountName: roleRequest.bankAccountName,
-            bankAccountNumber: roleRequest.bankAccountNumber,
           },
         });
       } else {
@@ -150,8 +148,10 @@ export async function approveRoleRequest(requestId: string) {
             userId: roleRequest.userId,
             phoneNumber: roleRequest.phoneNumber || "",
             vehicleType: roleRequest.vehicleType || "Motorcycle",
-            licenseNumber: roleRequest.licenseNumber || "",
-            nidNumber: roleRequest.nidNumber,
+            licenseNumber: roleRequest.licenseNumber || "TBD",
+            licenseExpiry: roleRequest.licenseExpiry || new Date(),
+            nidNumber: roleRequest.nidNumber || "TBD",
+            nidImage: roleRequest.nidImage,
           },
         });
       }
@@ -161,9 +161,9 @@ export async function approveRoleRequest(requestId: string) {
         data: {
           userId: roleRequest.userId,
           title: "Role Request Approved! 🎉",
-          message: `Your ${roleRequest.type === "VENDOR" ? "Vendor" : "Delivery Partner"} application has been approved.`,
+          message: `Your ${roleRequest.requestType === "VENDOR" ? "Vendor" : "Delivery Partner"} application has been approved.`,
           type: "success",
-          link: roleRequest.type === "VENDOR" ? "/dashboard/vendor" : "/dashboard/delivery",
+          link: roleRequest.requestType === "VENDOR" ? "/dashboard/vendor" : "/dashboard/delivery",
         },
       });
 
@@ -186,7 +186,12 @@ export async function rejectRoleRequest(requestId: string, reason: string) {
   try {
     const roleRequest = await prisma.roleRequest.update({
       where: { id: requestId },
-      data: { status: "REJECTED", adminNote: reason },
+      data: { 
+        status: "REJECTED", 
+        reviewedBy: session.user.id,
+        reviewedAt: new Date(),
+        rejectionReason: reason,
+      },
     });
 
     await prisma.notification.create({
@@ -247,8 +252,24 @@ export async function createProduct(data: {
   if (!session?.user) return { success: false, error: "Not authenticated" };
 
   try {
-    const vendor = await prisma.vendor.findUnique({ where: { userId: session.user.id } });
-    if (!vendor) return { success: false, error: "Vendor profile not found" };
+    let vendor = await prisma.vendor.findUnique({ where: { userId: session.user.id } });
+    
+    // Fail-safe: If user has VENDOR role but no Vendor profile (common in manual DB edits), create one.
+    if (!vendor) {
+      const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+      if (user?.role === "VENDOR") {
+        vendor = await prisma.vendor.create({
+          data: {
+            userId: session.user.id,
+            shopName: user.name + "'s Shop",
+            phoneNumber: user.phone || "0000000000",
+            businessType: "General",
+          }
+        });
+      } else {
+        return { success: false, error: "Vendor profile not found" };
+      }
+    }
 
     const product = await prisma.product.create({
       data: {
@@ -260,7 +281,6 @@ export async function createProduct(data: {
         image: data.image,
         images: data.images || [],
         category: data.category,
-        tags: data.tags || [],
         stock: data.stock,
       },
     });
@@ -364,10 +384,15 @@ export async function placeOrder(data: {
       const shippingCharge = data.city.toLowerCase().includes("dhaka") ? 80 : 120;
       const totalAmount = subtotal + shippingCharge;
 
+      const orderNumber = `NEX-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const zone = data.city.toLowerCase().includes("dhaka") ? "DHAKA" : "OUTSIDE_DHAKA";
+
       // Create order
       const order = await tx.order.create({
         data: {
           userId: session.user.id,
+          orderNumber,
+          zone,
           subtotal,
           shippingCharge,
           totalAmount,
@@ -380,7 +405,8 @@ export async function placeOrder(data: {
 
       // Create vendor orders (group items by vendor)
       const vendorGroups = new Map<string, { subtotal: number }>();
-      for (const item of order.items) {
+      const items = (order as any).items || [];
+      for (const item of items) {
         const product = item.product;
         const existing = vendorGroups.get(product.vendorId) || { subtotal: 0 };
         existing.subtotal += item.subtotal;
@@ -394,9 +420,8 @@ export async function placeOrder(data: {
           data: {
             orderId: order.id,
             vendorId,
-            subtotal: group.subtotal,
-            commission,
-            vendorEarning: group.subtotal - commission,
+            vendorAmount: group.subtotal - commission,
+            commissionAmount: commission,
           },
         });
       }
@@ -419,10 +444,10 @@ export async function getOrders(userId?: string) {
 
   try {
     const orders = await prisma.order.findMany({
-      where: { userId: userId || session.user.id },
+      where: userId ? { userId } : { userId: session.user.id },
       include: {
         items: { include: { product: true } },
-        deliveryPartner: { include: { user: { select: { name: true } } } },
+        deliveryAssignment: { include: { deliveryPartner: { include: { user: { select: { name: true } } } } } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -448,7 +473,7 @@ export async function getVendorOrders() {
           include: {
             user: { select: { name: true, email: true } },
             items: { include: { product: true } },
-            deliveryPartner: { include: { user: { select: { name: true } } } },
+            deliveryAssignment: { include: { deliveryPartner: { include: { user: { select: { name: true } } } } } },
           },
         },
       },
@@ -465,11 +490,11 @@ export async function acceptOrder(orderId: string) {
   try {
     const order = await prisma.order.update({
       where: { id: orderId },
-      data: { status: "ACCEPTED" },
+      data: { status: "CONFIRMED" },
     });
     await prisma.vendorOrder.updateMany({
       where: { orderId },
-      data: { status: "ACCEPTED" },
+      data: { status: "CONFIRMED" },
     });
     revalidatePath("/dashboard/vendor/orders");
     return { success: true, data: order };
@@ -495,18 +520,30 @@ export async function getAvailableDeliveryPartners() {
 }
 
 export async function assignDeliveryPartner(orderId: string, deliveryPartnerId: string) {
+  const session = await getSession();
+  if (!session?.user) return { success: false, error: "Not authenticated" };
+
   try {
     const order = await prisma.$transaction(async (tx) => {
+      const vendor = await tx.vendor.findUnique({ where: { userId: session.user.id } });
+      if (!vendor) throw new Error("Only vendors can assign partners");
+
+      const assignment = await tx.deliveryAssignment.upsert({
+        where: { orderId },
+        update: { deliveryPartnerId, vendorId: vendor.id },
+        create: { orderId, deliveryPartnerId, vendorId: vendor.id },
+      });
+
       const updated = await tx.order.update({
         where: { id: orderId },
         data: {
-          deliveryPartnerId,
-          status: "ASSIGNED",
+          deliveryAssignmentId: assignment.id,
+          status: "SHIPPED",
         },
       });
       await tx.vendorOrder.updateMany({
         where: { orderId },
-        data: { status: "ASSIGNED" },
+        data: { status: "SHIPPED" },
       });
 
       // Notify delivery partner
@@ -548,7 +585,7 @@ export async function getDeliveryJobs() {
     if (!dp) return { success: false, error: "Delivery partner not found" };
 
     const orders = await prisma.order.findMany({
-      where: { deliveryPartnerId: dp.id },
+      where: { deliveryAssignment: { deliveryPartnerId: dp.id } },
       include: {
         user: { select: { name: true, email: true } },
         items: { include: { product: true } },
@@ -570,24 +607,24 @@ export async function markAsDelivered(orderId: string) {
     const result = await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
-        include: { vendorOrders: true },
+        include: { vendorOrders: { include: { vendor: true } }, deliveryAssignment: true },
       });
       if (!order) throw new Error("Order not found");
 
       // 1. Update order status
       await tx.order.update({
         where: { id: orderId },
-        data: { status: "DELIVERED", deliveredAt: new Date() },
+        data: { status: "DELIVERED" },
       });
       await tx.vendorOrder.updateMany({
-        where: { orderId },
+        where: { id: orderId },
         data: { status: "DELIVERED" },
       });
 
       // 2. Delivery Partner earns shipping charge
-      if (order.deliveryPartnerId) {
+      if (order.deliveryAssignment) {
         await tx.deliveryPartner.update({
-          where: { id: order.deliveryPartnerId },
+          where: { id: order.deliveryAssignment.deliveryPartnerId },
           data: {
             totalEarnings: { increment: order.shippingCharge },
             totalDeliveries: { increment: 1 },
@@ -600,19 +637,21 @@ export async function markAsDelivered(orderId: string) {
         await tx.vendor.update({
           where: { id: vo.vendorId },
           data: {
-            balance: { increment: vo.vendorEarning },
-            totalEarnings: { increment: vo.vendorEarning },
+            balance: { increment: vo.vendorAmount },
+            totalSales: { increment: vo.vendorAmount },
           },
         });
       }
 
-      // 4. Platform revenue
-      const totalCommission = order.vendorOrders.reduce((sum, vo) => sum + vo.commission, 0);
-      await tx.platformRevenue.create({
+      // 4. Platform revenue (Note: Transaction model is used instead of non-existent platformRevenue)
+      const totalCommission = order.vendorOrders.reduce((sum, vo) => sum + vo.commissionAmount, 0);
+      await tx.transaction.create({
         data: {
           orderId: order.id,
           amount: totalCommission,
-          type: "commission",
+          type: "PLATFORM_COMMISSION",
+          userId: order.userId, // Default to customer or admin
+          description: `Commission for order #${order.orderNumber}`,
         },
       });
 
@@ -649,11 +688,11 @@ export async function startTransit(orderId: string) {
   try {
     await prisma.order.update({
       where: { id: orderId },
-      data: { status: "IN_TRANSIT" },
+      data: { status: "SHIPPED" },
     });
     await prisma.vendorOrder.updateMany({
       where: { orderId },
-      data: { status: "IN_TRANSIT" },
+      data: { status: "SHIPPED" },
     });
     revalidatePath("/dashboard/delivery");
     return { success: true };
@@ -669,7 +708,7 @@ export async function getAllUsers() {
   try {
     const users = await prisma.user.findMany({
       include: {
-        vendor: { select: { shopName: true, balance: true, totalEarnings: true } },
+        vendor: { select: { shopName: true, balance: true, totalSales: true } },
         deliveryPartner: { select: { totalEarnings: true, totalDeliveries: true } },
         _count: { select: { orders: true } },
       },
@@ -686,12 +725,60 @@ export async function updateUserRole(userId: string, role: string) {
   try {
     const user = await prisma.user.update({
       where: { id: userId },
-      data: { role: role as "CUSTOMER" | "VENDOR" | "DELIVERY_PARTNER" | "ADMIN" | "SUPER_ADMIN" },
+      data: { role: role as any },
     });
+
+    // Side effect: Create profile if role is VENDOR or DELIVERY_PARTNER and doesn't exist
+    if (role === "VENDOR") {
+      const vendor = await prisma.vendor.findUnique({ where: { userId } });
+      if (!vendor) {
+        await prisma.vendor.create({
+          data: {
+            userId,
+            shopName: user.name + "'s Shop",
+            phoneNumber: user.phone || "0000000000",
+            businessType: "General",
+          }
+        });
+      }
+    } else if (role === "DELIVERY_PARTNER") {
+      const dp = await prisma.deliveryPartner.findUnique({ where: { userId } });
+      if (!dp) {
+        await prisma.deliveryPartner.create({
+          data: {
+            userId,
+            phoneNumber: user.phone || "0000000000",
+            vehicleType: "Motorcycle",
+            licenseNumber: "TBD",
+            licenseExpiry: new Date(),
+            nidNumber: "TBD",
+          }
+        });
+      }
+    }
+
     revalidatePath("/dashboard/super-admin/users");
+    revalidatePath("/profile");
     return { success: true, data: user };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to update role";
+    return { success: false, error: message };
+  }
+}
+
+export async function updateUserProfile(data: { name?: string; phone?: string; image?: string }) {
+  const session = await getSession();
+  if (!session?.user) return { success: false, error: "Not authenticated" };
+
+  try {
+    const user = await prisma.user.update({
+      where: { id: session.user.id },
+      data,
+    });
+    revalidatePath("/profile");
+    return { success: true, data: user };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to update profile";
     return { success: false, error: message };
   }
 }
@@ -783,23 +870,23 @@ export async function getDeliveryPartnerStats() {
 
     const [todayDeliveries, monthDeliveries, totalOrders] = await Promise.all([
       prisma.order.count({
-        where: { deliveryPartnerId: dp.id, status: "DELIVERED", deliveredAt: { gte: todayStart } },
+        where: { deliveryAssignment: { deliveryPartnerId: dp.id }, status: "DELIVERED", updatedAt: { gte: todayStart } },
       }),
       prisma.order.count({
-        where: { deliveryPartnerId: dp.id, status: "DELIVERED", deliveredAt: { gte: monthStart } },
+        where: { deliveryAssignment: { deliveryPartnerId: dp.id }, status: "DELIVERED", updatedAt: { gte: monthStart } },
       }),
       prisma.order.count({
-        where: { deliveryPartnerId: dp.id },
+        where: { deliveryAssignment: { deliveryPartnerId: dp.id } },
       }),
     ]);
 
     // Calculate today's earnings (sum of shipping charges for today's deliveries)
     const todayEarnings = await prisma.order.aggregate({
-      where: { deliveryPartnerId: dp.id, status: "DELIVERED", deliveredAt: { gte: todayStart } },
+      where: { deliveryAssignment: { deliveryPartnerId: dp.id }, status: "DELIVERED", updatedAt: { gte: todayStart } },
       _sum: { shippingCharge: true },
     });
     const monthEarnings = await prisma.order.aggregate({
-      where: { deliveryPartnerId: dp.id, status: "DELIVERED", deliveredAt: { gte: monthStart } },
+      where: { deliveryAssignment: { deliveryPartnerId: dp.id }, status: "DELIVERED", updatedAt: { gte: monthStart } },
       _sum: { shippingCharge: true },
     });
 
@@ -810,8 +897,8 @@ export async function getDeliveryPartnerStats() {
         todayDeliveries,
         monthDeliveries,
         totalOrders,
-        todayEarnings: todayEarnings._sum.shippingCharge || 0,
-        monthEarnings: monthEarnings._sum.shippingCharge || 0,
+        todayEarnings: todayEarnings._sum?.shippingCharge || 0,
+        monthEarnings: monthEarnings._sum?.shippingCharge || 0,
       },
     };
   } catch (error: unknown) {
@@ -863,7 +950,7 @@ export async function getCustomerStats() {
     const activeOrders = await prisma.order.count({
       where: {
         userId: session.user.id,
-        status: { in: ["PENDING", "ACCEPTED", "ASSIGNED", "IN_TRANSIT"] },
+        status: { in: ["PENDING", "CONFIRMED", "SHIPPED"] },
       },
     });
 
