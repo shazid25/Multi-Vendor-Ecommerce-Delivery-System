@@ -1,50 +1,97 @@
+// import { betterAuth } from "better-auth";
+// import { prismaAdapter } from "better-auth/adapters/prisma";
+// import { prisma } from "../lib/prisma.js";
+
+// export const auth = betterAuth({
+//   debug: true,
+//   database: prismaAdapter(prisma, {
+//     provider: "postgresql",
+//   }),
+//   secret: process.env.BETTER_AUTH_SECRET || "a-very-secret-key-12345",
+//   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000/api/auth",
+//   trustedOrigins: [
+//     process.env.CLIENT_URL || "http://localhost:3000",
+//     "http://localhost:3000",
+//     "http://localhost:3001"
+//   ],
+//   emailAndPassword: {
+//     enabled: true,
+//     autoSignIn: true,
+//     requireEmailVerification: false,
+//   },
+//   session: {
+//     expiresIn: 60 * 60 * 24 * 30, // 30 days
+//     updateAge: 60 * 60 * 24 * 1, // 1 day
+//     cookieCache: {
+//       enabled: true,
+//       maxAge: 5 * 60, // 5 minutes
+//     },
+//   },
+// });
+
+// export type Session = typeof auth.$Infer.Session;
+
+
+
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { prisma } from "../lib/prisma";
+import { xprisma } from "../lib/prisma.js"; // Import the extended client
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
+  debug: true,
+  database: prismaAdapter(xprisma, { // Use xprisma here
     provider: "postgresql",
+    map: {
+      user: {
+        emailVerified: "emailVerified",
+      },
+    },
   }),
-  secret: process.env.BETTER_AUTH_SECRET,
-  baseURL: process.env.BETTER_AUTH_URL,
-  trustedOrigins: [process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"],
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: false,
-  },
-  socialProviders: {
-    github: {
-      clientId: process.env.GITHUB_CLIENT_ID || "",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
-    },
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    },
-  },
+
   user: {
     additionalFields: {
       role: {
         type: "string",
-        required: false,
         defaultValue: "CUSTOMER",
         input: false,
       },
-      totalSpent: {
-        type: "number",
+      phone: {
+        type: "string",
         required: false,
-        defaultValue: 0,
-        input: false,
       },
       isActive: {
         type: "boolean",
-        required: false,
         defaultValue: true,
-        input: false,
+      },
+      emailVerified: {
+        type: "date",
       },
     },
   },
-}) as any;
+
+  secret: process.env.BETTER_AUTH_SECRET || "a-very-secret-key-12345",
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000/api/auth",
+
+  trustedOrigins: [
+    process.env.CLIENT_URL || "http://localhost:3000",
+    "http://localhost:3000",
+    "http://localhost:3001",
+  ],
+
+  emailAndPassword: {
+    enabled: true,
+    autoSignIn: true,
+    requireEmailVerification: false,
+  },
+
+  session: {
+    expiresIn: 60 * 60 * 24 * 30,
+    updateAge: 60 * 60 * 24 * 1,
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+    },
+  },
+});
 
 export type Session = typeof auth.$Infer.Session;

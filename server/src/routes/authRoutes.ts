@@ -1,24 +1,24 @@
-import { Router, type Express } from 'express';
+import { Router, json } from 'express';
 import {
-  register,
-  login,
-  logout,
   getCurrentUser,
   updateProfile,
-  oauthLogin,
+  getAllUsers,
+  updateUserRole,
+  deleteUser,
+  getNotifications,
 } from '../controllers/authController.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, requireRole } from '../middleware/auth.js';
 
-const router: any = Router();
+const router = Router();
 
-// Public routes
-router.post('/register', register);
-router.post('/login', login);
-router.post('/oauth-login', oauthLogin);
-
-// Protected routes
+// 1. CUSTOM PROTECTED ROUTES
 router.get('/me', authMiddleware, getCurrentUser);
-router.post('/logout', authMiddleware, logout);
-router.put('/profile', authMiddleware, updateProfile);
+router.put('/profile', json(), authMiddleware, updateProfile);
+router.get('/notifications', authMiddleware, getNotifications);
+
+// 2. ADMIN ROUTES
+router.get('/users', authMiddleware, requireRole('ADMIN', 'SUPER_ADMIN'), getAllUsers);
+router.patch('/users/:id/role', json(), authMiddleware, requireRole('SUPER_ADMIN'), updateUserRole);
+router.delete('/users/:id', authMiddleware, requireRole('SUPER_ADMIN'), deleteUser);
 
 export default router;

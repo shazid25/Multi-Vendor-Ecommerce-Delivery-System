@@ -30,7 +30,7 @@ export function Footer() {
               {[
                 { href: "/shop", label: "Shop" },
                 { href: "/login", label: "Sign In" },
-                { href: "/register", label: "Register" },
+                { href: "/login?mode=register", label: "Register" },
               ].map((link) => (
                 <Link
                   key={link.href}

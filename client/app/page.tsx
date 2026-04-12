@@ -153,7 +153,7 @@ export default function HomePage() {
                 </Link>
               ) : (
                 <>
-                  <Link href="/register">
+                  <Link href="/login?mode=register">
                     <Button variant="gradient" size="xl" className="group shadow-xl shadow-primary/25">
                       Start Shopping
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -395,7 +395,7 @@ export default function HomePage() {
                   </div>
                   <h3 className="text-2xl font-bold mb-4">{role.title}</h3>
                   <p className="text-muted-foreground mb-6 leading-relaxed">{role.desc}</p>
-                  <Link href="/register" className="inline-flex items-center text-primary font-bold hover:gap-2 transition-all">
+                  <Link href="/login?mode=register" className="inline-flex items-center text-primary font-bold hover:gap-2 transition-all">
                     Get Started <ChevronRight className="w-5 h-5" />
                   </Link>
                 </motion.div>
@@ -428,7 +428,7 @@ export default function HomePage() {
               Create your Green Mart account today and get free delivery on your first order.
             </p>
             {!session?.user && (
-              <Link href="/register">
+              <Link href="/login?mode=register">
                 <Button size="xl" className="bg-white text-emerald-600 hover:bg-white/90 shadow-2xl px-12 h-16 rounded-full text-xl font-bold group">
                   Join Green Mart Now
                   <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />

@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { getAllBanners, createBanner, updateBanner, deleteBanner } from "@/app/actions/mart-actions";
 import { toast } from "sonner";
+import { FileUpload } from "@/components/shared/file-upload";
+import { Badge } from "@/components/ui/badge";
 
 export default function BannerManagement() {
   const [banners, setBanners] = useState<any[]>([]);
@@ -72,8 +74,11 @@ export default function BannerManagement() {
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Plus className="w-5 h-5" /> Add New Banner
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Input placeholder="Image URL" value={newBanner.image} onChange={e => setNewBanner({...newBanner, image: e.target.value})} />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="md:col-span-1">
+              <label className="text-xs font-medium mb-1 block text-muted-foreground">Banner Image</label>
+              <FileUpload value={newBanner.image} onChange={url => setNewBanner({...newBanner, image: url})} />
+            </div>
             <Input placeholder="Title (optional)" value={newBanner.title} onChange={e => setNewBanner({...newBanner, title: e.target.value})} />
             <Input placeholder="Link (optional)" value={newBanner.link} onChange={e => setNewBanner({...newBanner, link: e.target.value})} />
             <Input type="number" placeholder="Order" value={newBanner.order} onChange={e => setNewBanner({...newBanner, order: parseInt(e.target.value)})} />

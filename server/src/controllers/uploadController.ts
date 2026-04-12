@@ -4,13 +4,18 @@ import { AuthRequest } from '../middleware/auth.js';
 import { AppError } from '../middleware/error.js';
 
 interface AuthRequestWithFile extends AuthRequest {
-  file?: any;
+  file?: Express.Multer.File;
 }
 
+// Support both NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and CLOUDINARY_CLOUD_NAME
+const cloud_name = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME;
+const api_key = process.env.CLOUDINARY_API_KEY;
+const api_secret = process.env.CLOUDINARY_API_SECRET;
+
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name,
+  api_key,
+  api_secret,
 });
 
 export const uploadImage = async (
@@ -23,28 +28,21 @@ export const uploadImage = async (
     }
 
     if (!req.user) {
-      throw new AppError('Unauthorized', 401);
+      throw new AppError('Unauthorized: Please log in to upload images', 401);
     }
 
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedMimes.includes(req.file.mimetype)) {
-      throw new AppError('Only JPEG, PNG, GIF, and WebP images are allowed', 400);
-    }
-
-    const fileSize = req.file.size;
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (fileSize > maxSize) {
-      throw new AppError('File size must be less than 5MB', 400);
-    }
-
+    // Role-based folder organization
+    const roleFolder = req.user.role ? req.user.role.toLowerCase() : 'general';
+    
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: `ecommerce/${req.user.role}`,
+        folder: `green-mart/${roleFolder}`,
         resource_type: 'auto',
       },
       (error, result) => {
         if (error) {
-          res.status(500).json({ message: 'Upload failed' });
+          console.error('Cloudinary upload error:', error);
+          res.status(500).json({ message: 'Cloudinary upload failed' });
           return;
         }
 
@@ -58,6 +56,7 @@ export const uploadImage = async (
 
     uploadStream.end(req.file.buffer);
   } catch (error) {
+    console.error('Upload handler error:', error);
     if (error instanceof AppError) {
       res.status(error.statusCode).json({ message: error.message });
     } else {
@@ -67,7 +66,7 @@ export const uploadImage = async (
 };
 
 export const deleteImage = async (
-  req: AuthRequestWithFile,
+  req: AuthRequest,
   res: Response
 ): Promise<void> => {
   try {
@@ -81,7 +80,11 @@ export const deleteImage = async (
       throw new AppError('Public ID is required', 400);
     }
 
-    await cloudinary.uploader.destroy(publicId);
+    const result = await cloudinary.uploader.destroy(publicId);
+
+    if (result.result !== 'ok') {
+      throw new AppError('Failed to delete image from Cloudinary', 500);
+    }
 
     res.status(200).json({
       message: 'Image deleted successfully',

@@ -11,12 +11,15 @@ import { TiltCard, PageTransition } from "@/components/shared/mart-ui";
 import { getProducts } from "@/app/actions/mart-actions";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { useCart } from "@/lib/cart-store";
+import Link from "next/link";
 
 export default function ShopPage() {
   const [products, setProducts] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
+  const { addItem } = useCart();
 
   useEffect(() => {
     loadProducts();
@@ -29,6 +32,18 @@ export default function ShopPage() {
     else toast.error("Failed to load products");
     setLoading(false);
   }
+
+  const handleAddToCart = (product: any) => {
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.discountPrice || product.price,
+      quantity: 1,
+      image: product.image,
+      vendorId: product.vendorId,
+    });
+    toast.success(`${product.name} added to cart!`);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,10 +209,23 @@ export default function ShopPage() {
                             </span>
                           </div>
 
-                          <Button variant="gradient" className="w-full" size="sm" disabled={(product.stock as number) <= 0}>
-                            <ShoppingCart className="w-4 h-4 mr-2" />
-                            Add to Cart
-                          </Button>
+                          <div className="flex gap-2 pt-1">
+                            <Link href={`/shop/${product.id}`} className="flex-1">
+                              <Button variant="outline" className="w-full" size="sm">
+                                Details
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="gradient"
+                              className="flex-1"
+                              size="sm"
+                              disabled={(product.stock as number) <= 0}
+                              onClick={() => handleAddToCart(product)}
+                            >
+                              <ShoppingCart className="w-4 h-4 mr-2" />
+                              Add
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </TiltCard>

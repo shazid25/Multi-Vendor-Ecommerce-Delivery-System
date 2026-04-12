@@ -22,6 +22,8 @@ import {
   Store,
   ClipboardList,
   Bell,
+  Image,
+  HelpCircle,
 } from "lucide-react";
 import { signOut, useSession } from "@/lib/auth-client";
 import { ThemeToggle } from "./theme-toggle";
@@ -59,6 +61,8 @@ const roleLinks: Record<string, SidebarLink[]> = {
     { href: "/dashboard/super-admin/users", label: "All Users", icon: Users },
     { href: "/dashboard/super-admin/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/dashboard/super-admin/requests", label: "Role Requests", icon: Shield },
+    { href: "/dashboard/super-admin/banners", label: "Banners", icon: Image },
+    { href: "/dashboard/super-admin/faqs", label: "FAQs", icon: HelpCircle },
   ],
 };
 

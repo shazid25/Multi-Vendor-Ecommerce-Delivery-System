@@ -1,16 +1,16 @@
-import { betterFetch } from "@better-fetch/fetch";
 import { NextResponse, type NextRequest } from "next/server";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
 export default async function middleware(request: NextRequest) {
-  const { data: session } = await betterFetch<any>(
-    "/api/auth/get-session",
-    {
-      baseURL: request.nextUrl.origin,
-      headers: {
-        cookie: request.headers.get("cookie") || "",
-      },
-    }
-  );
+  // Call the server's auth/me endpoint to get the session
+  const res = await fetch(`${API_URL}/auth/me`, {
+    headers: {
+      cookie: request.headers.get("cookie") || "",
+    },
+  });
+
+  const session = res.ok ? await res.json() : null;
 
   const pathname = request.nextUrl.pathname;
 
@@ -23,7 +23,7 @@ export default async function middleware(request: NextRequest) {
   }
 
   // 2. Role-based protection for dashboards
-  const role = session.user.role;
+  const role = session.role;
 
   // Protect Admin Dashboard
   if (pathname.startsWith("/dashboard/admin") || pathname.startsWith("/dashboard/super-admin")) {

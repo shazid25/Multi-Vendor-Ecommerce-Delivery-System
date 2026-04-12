@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShoppingBag,
+  ShoppingCart,
   Menu,
   X,
   User,
@@ -17,9 +18,11 @@ import { ThemeToggle } from "./theme-toggle";
 import { useSession, signOut } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/lib/cart-store";
 
 export function Navbar() {
   const { data: session } = useSession();
+  const { state } = useCart();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
@@ -103,6 +106,16 @@ export function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            <Link href="/checkout">
+              <Button variant="ghost" size="icon" className="relative">
+                <ShoppingCart className="w-5 h-5" />
+                {state.totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                    {state.totalItems}
+                  </span>
+                )}
+              </Button>
+            </Link>
             <ThemeToggle />
 
             {session?.user ? (
