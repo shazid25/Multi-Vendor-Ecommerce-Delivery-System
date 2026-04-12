@@ -1,30 +1,59 @@
 // import { betterAuth } from "better-auth";
 // import { prismaAdapter } from "better-auth/adapters/prisma";
-// import { prisma } from "../lib/prisma.js";
+// import { xprisma } from "../lib/prisma.js"; // Import the extended client
 
 // export const auth = betterAuth({
 //   debug: true,
-//   database: prismaAdapter(prisma, {
+//   database: prismaAdapter(xprisma, { // Use xprisma here
 //     provider: "postgresql",
+//     map: {
+//       user: {
+//         emailVerified: "emailVerified",
+//       },
+//     },
 //   }),
+
+//   user: {
+//     additionalFields: {
+//       role: {
+//         type: "string",
+//         defaultValue: "CUSTOMER",
+//         input: false,
+//       },
+//       phone: {
+//         type: "string",
+//         required: false,
+//       },
+//       isActive: {
+//         type: "boolean",
+//         defaultValue: true,
+//       },
+//       emailVerified: {
+//         type: "date",
+//       },
+//     },
+//   },
+
 //   secret: process.env.BETTER_AUTH_SECRET || "a-very-secret-key-12345",
 //   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000/api/auth",
+
 //   trustedOrigins: [
 //     process.env.CLIENT_URL || "http://localhost:3000",
 //     "http://localhost:3000",
-//     "http://localhost:3001"
+//     "http://localhost:3001",
 //   ],
+
 //   emailAndPassword: {
 //     enabled: true,
 //     autoSignIn: true,
 //     requireEmailVerification: false,
 //   },
+
 //   session: {
-//     expiresIn: 60 * 60 * 24 * 30, // 30 days
-//     updateAge: 60 * 60 * 24 * 1, // 1 day
+//     expiresIn: 60 * 60 * 24 * 30,
+//     updateAge: 60 * 60 * 24 * 1,
 //     cookieCache: {
-//       enabled: true,
-//       maxAge: 5 * 60, // 5 minutes
+//       enabled: false,
 //     },
 //   },
 // });
@@ -35,18 +64,16 @@
 
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { xprisma } from "../lib/prisma.js"; // Import the extended client
+import { xprisma } from "../lib/prisma.js"; 
 
 export const auth = betterAuth({
   debug: true,
-  database: prismaAdapter(xprisma, { // Use xprisma here
+  database: prismaAdapter(xprisma, {
     provider: "postgresql",
-    map: {
-      user: {
-        emailVerified: "emailVerified",
-      },
-    },
   }),
+
+  // This ensures Better-Auth knows exactly where it's running on Vercel
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000/api/auth",
 
   user: {
     additionalFields: {
@@ -69,13 +96,11 @@ export const auth = betterAuth({
     },
   },
 
-  secret: process.env.BETTER_AUTH_SECRET || "a-very-secret-key-12345",
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000/api/auth",
-
+  secret: process.env.BETTER_AUTH_SECRET,
+  
   trustedOrigins: [
     process.env.CLIENT_URL || "http://localhost:3000",
-    "http://localhost:3000",
-    "http://localhost:3001",
+    "https://multivendor-phi.vercel.app", 
   ],
 
   emailAndPassword: {
