@@ -114,7 +114,7 @@ This project is optimized for **Vercel** (Frontend) and any Node.js compatible e
 **Irfan Shazid**
 
   * **GitHub:** [@shazid25](https://github.com/shazid25)
-  * **LinkedIn:** [Your LinkedIn Profile]
+  * **LinkedIn:** [@irfan-shazid](https://www.linkedin.com/in/irfan-shazid/)
   * **Email:** irfanshazid814@gmail.com
 
 -----
