@@ -73,7 +73,7 @@ export const auth = betterAuth({
   }),
 
   // This ensures Better-Auth knows exactly where it's running on Vercel
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000/api/auth",
+  baseURL: process.env.BETTER_AUTH_URL || "http://127.0.0.1:5000/api/auth",
 
   user: {
     additionalFields: {
@@ -90,17 +90,16 @@ export const auth = betterAuth({
         type: "boolean",
         defaultValue: true,
       },
-      emailVerified: {
-        type: "date",
-      },
     },
   },
 
   secret: process.env.BETTER_AUTH_SECRET,
   
   trustedOrigins: [
-    process.env.CLIENT_URL || "http://localhost:3000",
-    "https://multivendor-phi.vercel.app", 
+    process.env.CLIENT_URL || "http://127.0.0.1:3000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
   ],
 
   emailAndPassword: {
@@ -114,6 +113,16 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24 * 1,
     cookieCache: {
       enabled: false,
+    },
+  },
+  advanced: {
+    cookies: {
+      session_token: {
+        attributes: {
+          sameSite: "none",
+          secure: true,
+        },
+      },
     },
   },
 });

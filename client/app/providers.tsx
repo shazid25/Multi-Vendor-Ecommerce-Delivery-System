@@ -3,6 +3,7 @@
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { CartProvider } from "@/lib/cart-store";
+import { LenisProvider } from "@/components/providers/lenis-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -12,9 +13,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange={false}
     >
-      <CartProvider>
-        {children}
-      </CartProvider>
+      <LenisProvider>
+        <CartProvider>
+          {children}
+        </CartProvider>
+      </LenisProvider>
       <Toaster
         position="top-right"
         richColors

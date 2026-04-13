@@ -108,7 +108,7 @@ export const authMiddleware = async (
     }
 
     // Explicitly casting the session user to our AuthRequest user type
-    req.user = session.user as AuthRequest['user'];
+    req.user = session.user as unknown as AuthRequest['user'];
     req.session = session.session;
     next();
   } catch (error) {
@@ -144,7 +144,7 @@ export const optionalAuth = async (
     });
 
     if (session) {
-      req.user = session.user as AuthRequest['user'];
+      req.user = session.user as unknown as AuthRequest['user'];
       req.session = session.session;
     }
 

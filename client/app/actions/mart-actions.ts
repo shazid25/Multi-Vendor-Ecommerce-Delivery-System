@@ -383,12 +383,11 @@ import { revalidatePath } from "next/cache";
 import { headers, cookies } from "next/headers";
 import Stripe from "stripe";
 
+// Determine the internal API_URL for server-to-server calls.
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
 
 // ─── Stripe Initialization ──────────────────────────────────────────────────
-// We check for the key first to prevent the "Neither apiKey nor..." error
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-
 const stripe = stripeSecretKey 
   ? new Stripe(stripeSecretKey, { apiVersion: "2023-10-16" as any })
   : null;
@@ -399,12 +398,15 @@ async function serverFetch(endpoint: string, options: RequestInit = {}) {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
   
-  const res = await fetch(`${API_URL}${endpoint}`, {
+  // Use absolute URL for server-side fetches
+  const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
+
+  const res = await fetch(url, {
     ...options,
     headers: {
-      ...options.headers,
-      Cookie: cookieHeader,
       "Content-Type": "application/json",
+      "Cookie": cookieHeader,
+      ...options.headers,
     },
   });
 
@@ -565,7 +567,12 @@ export async function deleteProduct(productId: string) {
 
 // ─── Order Actions ──────────────────────────────────────────────────────────
 
-export async function placeOrder(data: any) {
+export async function placeOrder(data: {
+  items: Array<{ productId: string; quantity: number }>;
+  city: string;
+  shippingAddress: string;
+  paymentMethod: 'STRIPE' | 'CASH_ON_DELIVERY';
+}) {
   const res = await serverFetch("/orders", {
     method: "POST",
     body: JSON.stringify(data),

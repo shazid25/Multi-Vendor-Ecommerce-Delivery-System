@@ -607,6 +607,11 @@ enum LocationZone {
   OUTSIDE_DHAKA
 }
 
+enum PaymentMethod {
+  STRIPE
+  CASH_ON_DELIVERY
+}
+
 // ==================== MODELS ====================
 
 model User {
@@ -793,6 +798,7 @@ model Order {
   
   status                OrderStatus @default(PENDING)
   paymentStatus         PaymentStatus @default(PENDING)
+  paymentMethod         PaymentMethod @default(STRIPE)
   
   deliveryAssignmentId  String?
   deliveryAssignment    DeliveryAssignment?

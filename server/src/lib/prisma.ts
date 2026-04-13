@@ -1,18 +1,3 @@
-// import { PrismaClient } from "@prisma/client";
-// import "dotenv/config";
-
-// const globalForPrisma = globalThis as unknown as {
-//   prisma: PrismaClient | undefined;
-// };
-
-// export const prisma =
-//   globalForPrisma.prisma ??
-//   new PrismaClient({
-//     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-//   });
-
-// if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
 import { PrismaClient } from "@prisma/client";
 import "dotenv/config";
 
@@ -21,25 +6,24 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // Base Prisma Client
-export const prisma =
+const basePrisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
-// Extended Prisma Client (The Fix)
-export const xprisma = prisma.$extends({
+// Extended Prisma Client
+export const xprisma = basePrisma.$extends({
   query: {
     user: {
       async create({ args, query }) {
-        // If emailVerified is passed as a boolean, convert it to null for Postgres
         if (typeof args.data.emailVerified === "boolean") {
           args.data.emailVerified = null;
         }
         return query(args);
       },
       async update({ args, query }) {
-        if (typeof args.data.emailVerified === "boolean") {
+        if (args.data && typeof args.data.emailVerified === "boolean") {
           args.data.emailVerified = null;
         }
         return query(args);
@@ -48,4 +32,6 @@ export const xprisma = prisma.$extends({
   },
 });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export const prisma = xprisma;
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = basePrisma;

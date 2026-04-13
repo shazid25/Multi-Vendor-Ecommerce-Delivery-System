@@ -1,22 +1,36 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
 
 export default async function middleware(request: NextRequest) {
-  // Call the server's auth/me endpoint to get the session
-  const res = await fetch(`${API_URL}/auth/me`, {
-    headers: {
-      cookie: request.headers.get("cookie") || "",
-    },
-  });
-
-  const session = res.ok ? await res.json() : null;
-
   const pathname = request.nextUrl.pathname;
+
+  // Skip middleware for static assets and public files
+  if (
+    pathname.startsWith("/_next") || 
+    pathname.startsWith("/api") || 
+    pathname.startsWith("/public") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
+  }
+
+  // Call the server's auth/me endpoint to get the session
+  let session = null;
+  try {
+    const res = await fetch(`${API_URL}/auth/me`, {
+      headers: {
+        cookie: request.headers.get("cookie") || "",
+      },
+    });
+    session = res.ok ? await res.json() : null;
+  } catch (error) {
+    console.error("Middleware Auth Error:", error);
+  }
 
   // 1. If not logged in and trying to access protected routes, redirect to login
   if (!session) {
-    if (pathname.startsWith("/dashboard") || pathname.startsWith("/profile")) {
+    if (pathname === "/dashboard" || pathname.startsWith("/dashboard/") || pathname.startsWith("/profile")) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     return NextResponse.next();

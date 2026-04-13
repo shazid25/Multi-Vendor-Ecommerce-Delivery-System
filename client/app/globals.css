@@ -4,8 +4,9 @@
 
 @layer base {
   :root {
-    /* Clean Light Gray Background (#f9fafb) */
-    --background: oklch(0.985 0.002 240);
+    /* Clean Light Gray Background (#f9fafb) 
+    /* --background: oklch(0.985 0.002 240); */
+    --background: oklch(0.97 0.04 145);
     --foreground: oklch(0.145 0.005 240);
     
     /* Pure White or very light gray for cards */

@@ -89,6 +89,7 @@ export default function VendorOrders() {
                 <TableHead>Order #</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Delivery</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -110,6 +111,11 @@ export default function VendorOrders() {
                       </div>
                     </TableCell>
                     <TableCell className="font-bold">{formatCurrency(vo.vendorAmount)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px] uppercase">
+                        {order.paymentMethod?.replace(/_/g, " ") || "STRIPE"}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={
                         vo.status === "DELIVERED" ? "success" :

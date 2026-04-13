@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useReducer, ReactNode } from "react";
+import { useSession } from "./auth-client";
 
 export interface CartItem {
   id: string;
@@ -84,24 +85,35 @@ const CartContext = createContext<{
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+  const { data: session } = useSession();
+  
+  // Create a unique key for each user to prevent cart sharing
+  const userId = session?.user?.id || "guest";
+  const storageKey = `mart-cart-${userId}`;
 
-  // Load from local storage on mount
+  // Load from local storage on mount OR when user changes
   useEffect(() => {
-    const saved = localStorage.getItem("mart-cart");
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         dispatch({ type: "LOAD_CART", state: parsed });
       } catch (e) {
         console.error("Failed to load cart", e);
+        dispatch({ type: "LOAD_CART", state: initialState });
       }
+    } else {
+      dispatch({ type: "LOAD_CART", state: initialState });
     }
-  }, []);
+  }, [storageKey]);
 
   // Save to local storage on change
   useEffect(() => {
-    localStorage.setItem("mart-cart", JSON.stringify(state));
-  }, [state]);
+    // Only save if it's not the initial state OR if we already have something in storage
+    if (state.items.length > 0 || localStorage.getItem(storageKey)) {
+      localStorage.setItem(storageKey, JSON.stringify(state));
+    }
+  }, [state, storageKey]);
 
   const addItem = (item: CartItem) => dispatch({ type: "ADD_ITEM", item });
   const removeItem = (id: string) => dispatch({ type: "REMOVE_ITEM", id });

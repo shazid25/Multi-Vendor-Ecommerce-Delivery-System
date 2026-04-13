@@ -6,7 +6,7 @@ import { AppError } from '../middleware/error.js';
 export const placeOrder = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) throw new AppError('Unauthorized', 401);
-    const { items, city, shippingAddress } = req.body;
+    const { items, city, shippingAddress, paymentMethod } = req.body;
 
     const result = await prisma.$transaction(async (tx) => {
       let subtotal = 0;
@@ -48,6 +48,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
           totalAmount,
           city,
           shippingAddress,
+          paymentMethod: paymentMethod || 'STRIPE',
           items: { create: orderItems },
         },
         include: { items: { include: { product: true } } },
@@ -136,19 +137,47 @@ export const getVendorOrders = async (req: AuthRequest, res: Response) => {
 
 export const acceptOrder = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) throw new AppError('Unauthorized', 401);
     const { id } = req.params;
-    const order = await prisma.order.update({
-      where: { id },
-      data: { status: 'CONFIRMED' },
+
+    const vendor = await prisma.vendor.findUnique({ where: { userId: req.user.id } });
+    if (!vendor) throw new AppError('Vendor profile not found', 404);
+
+    const vendorOrder = await prisma.vendorOrder.findUnique({
+      where: { orderId_vendorId: { orderId: id, vendorId: vendor.id } }
     });
-    await prisma.vendorOrder.updateMany({
-      where: { orderId: id },
-      data: { status: 'CONFIRMED' },
+
+    if (!vendorOrder) throw new AppError('Order not found for this vendor', 404);
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Update vendor order status
+      const updatedVO = await tx.vendorOrder.update({
+        where: { id: vendorOrder.id },
+        data: { status: 'CONFIRMED' },
+      });
+
+      // Check if ALL vendor orders for this main order are now confirmed
+      const allVOs = await tx.vendorOrder.findMany({ where: { orderId: id } });
+      const allConfirmed = allVOs.every(vo => vo.status === 'CONFIRMED');
+
+      if (allConfirmed) {
+        await tx.order.update({
+          where: { id },
+          data: { status: 'CONFIRMED' },
+        });
+      }
+
+      return updatedVO;
     });
-    res.status(200).json(order);
+
+    res.status(200).json(result);
   } catch (error) {
     console.error('acceptOrder Error:', error);
-    res.status(500).json({ message: 'Failed to accept order' });
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: 'Failed to accept order' });
+    }
   }
 };
 
@@ -202,8 +231,17 @@ export const markAsDelivered = async (req: AuthRequest, res: Response) => {
           where: { id: order.deliveryAssignment.deliveryPartnerId },
           data: {
             totalEarnings: { increment: fixedPayment },
+            availableBalance: { increment: fixedPayment },
             totalDeliveries: { increment: 1 },
           },
+        });
+        
+        await tx.deliveryEarning.create({
+          data: {
+            deliveryPartnerId: order.deliveryAssignment.deliveryPartnerId,
+            orderId: order.id,
+            amount: fixedPayment,
+          }
         });
       }
 
@@ -213,11 +251,22 @@ export const markAsDelivered = async (req: AuthRequest, res: Response) => {
           data: {
             balance: { increment: vo.vendorAmount },
             totalSales: { increment: vo.vendorAmount },
+            totalOrders: { increment: 1 },
           },
         });
       }
 
       const totalCommission = order.vendorOrders.reduce((sum, vo) => sum + vo.commissionAmount, 0);
+      
+      // Update platform balance (Admin)
+      await tx.user.updateMany({
+        where: { role: 'SUPER_ADMIN' },
+        data: { 
+          platformBalance: { increment: totalCommission },
+          totalPlatformRevenue: { increment: totalCommission }
+        }
+      });
+
       await tx.transaction.create({
         data: {
           orderId: order.id,
@@ -228,10 +277,14 @@ export const markAsDelivered = async (req: AuthRequest, res: Response) => {
         },
       });
 
-      await tx.user.update({
-        where: { id: order.userId },
-        data: { totalSpent: { increment: order.totalAmount } },
-      });
+      // Update user totalSpent only if it wasn't already updated (e.g. by Stripe Webhook)
+      // Actually, to be safe, we can check if payment was already COMPLETED
+      if (order.paymentStatus !== 'COMPLETED') {
+        await tx.user.update({
+          where: { id: order.userId },
+          data: { totalSpent: { increment: order.totalAmount } },
+        });
+      }
 
       await tx.notification.create({
         data: {

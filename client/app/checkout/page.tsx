@@ -16,6 +16,7 @@ export default function CheckoutPage() {
   const { state, removeItem, updateQuantity, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [paymentMethod, setPaymentMethod] = useState<'STRIPE' | 'CASH_ON_DELIVERY'>('STRIPE');
   const [address, setAddress] = useState({
     city: "Dhaka",
     street: "",
@@ -34,22 +35,30 @@ export default function CheckoutPage() {
         items: state.items.map(i => ({ productId: i.id, quantity: i.quantity })),
         city: address.city,
         shippingAddress: address.street,
+        paymentMethod: paymentMethod,
       });
 
       if (!orderRes.success) throw new Error(orderRes.error);
 
-      // 2. Create Stripe Session
-      const stripeRes = await createCheckoutSession({
-        orderId: orderRes.data.id,
-        amount: total,
-        items: state.items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
-      });
+      if (paymentMethod === 'STRIPE') {
+        // 2. Create Stripe Session
+        const stripeRes = await createCheckoutSession({
+          orderId: orderRes.data.id,
+          amount: total,
+          items: state.items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+        });
 
-      if (!stripeRes.success) throw new Error(stripeRes.error);
+        if (!stripeRes.success) throw new Error(stripeRes.error);
 
-      // 3. Redirect to Stripe
-      if (stripeRes.url) {
-        window.location.href = stripeRes.url;
+        // 3. Redirect to Stripe
+        if (stripeRes.url) {
+          window.location.href = stripeRes.url;
+        }
+      } else {
+        // Cash on Delivery - Success!
+        clearCart();
+        toast.success("Order placed successfully with Cash on Delivery!");
+        router.push(`/dashboard/customer/orders?success=true&orderId=${orderRes.data.id}`);
       }
     } catch (error: any) {
       toast.error(error.message || "Checkout failed");
@@ -87,6 +96,34 @@ export default function CheckoutPage() {
                 <div className="space-y-2">
                   <Label>Street Address</Label>
                   <Input placeholder="House #, Road #, Area..." value={address.street} onChange={e => setAddress({...address, street: e.target.value})} />
+                </div>
+              </div>
+            </GlassCard>
+
+            <GlassCard className="p-6">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-primary" /> Payment Method
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div 
+                  onClick={() => setPaymentMethod('STRIPE')}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'STRIPE' ? 'border-primary bg-primary/5' : 'border-white/5 hover:border-white/10'}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold">Online Payment</span>
+                    <CreditCard className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Pay securely with your credit or debit card via Stripe.</p>
+                </div>
+                <div 
+                  onClick={() => setPaymentMethod('CASH_ON_DELIVERY')}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'CASH_ON_DELIVERY' ? 'border-primary bg-primary/5' : 'border-white/5 hover:border-white/10'}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold">Cash on Delivery</span>
+                    <ShoppingCart className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Pay in cash when your order is delivered to your doorstep.</p>
                 </div>
               </div>
             </GlassCard>
@@ -133,7 +170,13 @@ export default function CheckoutPage() {
                 </div>
               </div>
               <Button onClick={handleCheckout} disabled={loading} className="w-full h-14 text-lg" variant="gradient">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <><CreditCard className="w-5 h-5 mr-2" /> Pay with Stripe</>}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : (
+                  paymentMethod === 'STRIPE' ? (
+                    <><CreditCard className="w-5 h-5 mr-2" /> Pay with Stripe</>
+                  ) : (
+                    <><ShoppingCart className="w-5 h-5 mr-2" /> Place COD Order</>
+                  )
+                )}
               </Button>
               <p className="text-[10px] text-center text-muted-foreground mt-4 leading-relaxed">
                 By completing your purchase you agree to our Terms of Service and Privacy Policy.

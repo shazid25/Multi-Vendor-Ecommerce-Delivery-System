@@ -42,7 +42,7 @@ export function FileUpload({ value, onChange, onRemove }: FileUploadProps) {
       // Better Auth usually handles cookies, but if the server is on a different port/domain, 
       // we might need to send the token explicitly or use credentials: include.
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000'}/api/upload/upload`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL || 'http://127.0.0.1:5000'}/api/upload/upload`, {
         method: "POST",
         body: formData,
         // If using Better Auth session tokens in headers:
