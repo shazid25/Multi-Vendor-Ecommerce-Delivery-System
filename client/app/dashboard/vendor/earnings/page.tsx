@@ -41,7 +41,7 @@ export default function VendorEarnings() {
         <BentoGrid columns={3}>
           <StatCard title="Available Balance" value={formatCurrency(vendor?.balance || 0)} icon={<DollarSign className="w-6 h-6" />} gradient="from-emerald-500/10 to-teal-500/10" />
           <StatCard title="Total Sales" value={formatCurrency(vendor?.totalSales || 0)} icon={<TrendingUp className="w-6 h-6" />} gradient="from-blue-500/10 to-indigo-500/10" />
-          <StatCard title="Commission Rate" value={`${vendor?.platformCommission || 10}%`} icon={<ArrowUpRight className="w-6 h-6" />} gradient="from-amber-500/10 to-orange-500/10" />
+          <StatCard title="Commission Rate" value={`${vendor?.platformCommission || 5}%`} icon={<ArrowUpRight className="w-6 h-6" />} gradient="from-amber-500/10 to-orange-500/10" />
         </BentoGrid>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

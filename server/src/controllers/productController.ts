@@ -34,7 +34,7 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) throw new AppError('Unauthorized', 401);
 
-    const { name, description, price, discountPrice, image, images, category, stock } = req.body;
+    const { name, description, price, discountPrice, unit, unitValue, image, images, category, stock } = req.body;
 
     let vendor = await prisma.vendor.findUnique({ where: { userId: req.user.id } });
     
@@ -62,6 +62,8 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
         description,
         price: Number(price),
         discountPrice: discountPrice ? Number(discountPrice) : null,
+        unit: unit || "piece",
+        unitValue: unitValue ? Number(unitValue) : 1,
         image,
         images: images || [],
         category,

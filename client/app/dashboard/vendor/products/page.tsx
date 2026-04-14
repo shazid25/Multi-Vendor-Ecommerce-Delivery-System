@@ -31,6 +31,8 @@ export default function VendorProducts() {
     category: "",
     stock: 0,
     image: "",
+    unit: "piece",
+    unitValue: 1,
   });
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function VendorProducts() {
     if (res.success) {
       toast.success("Product created successfully");
       setIsAddDialogOpen(false);
-      setFormData({ name: "", description: "", price: 0, discountPrice: 0, category: "", stock: 0, image: "" });
+      setFormData({ name: "", description: "", price: 0, discountPrice: 0, category: "", stock: 0, image: "", unit: "piece", unitValue: 1 });
       loadData();
     } else {
       toast.error(res.error || "Failed to create product");
@@ -125,11 +127,21 @@ export default function VendorProducts() {
                     <Input id="price" type="number" value={formData.price} onChange={e => setFormData({...formData, price: parseFloat(e.target.value)})} required />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="unitValue">Unit Value</Label>
+                    <Input id="unitValue" type="number" value={formData.unitValue} onChange={e => setFormData({...formData, unitValue: parseInt(e.target.value)})} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unit">Unit (kg/pc/etc)</Label>
+                    <Input id="unit" placeholder="kg, piece, etc" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
                     <Label htmlFor="discount">Discount (৳)</Label>
                     <Input id="discount" type="number" value={formData.discountPrice} onChange={e => setFormData({...formData, discountPrice: parseFloat(e.target.value)})} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="stock">Stock</Label>
+                    <Label htmlFor="stock">Stock (Units)</Label>
                     <Input id="stock" type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: parseInt(e.target.value)})} required />
                   </div>
                 </div>
@@ -188,12 +200,17 @@ export default function VendorProducts() {
                   </TableCell>
                   <TableCell><Badge variant="outline">{product.category}</Badge></TableCell>
                   <TableCell>
-                    {product.discountPrice ? (
-                      <div className="flex flex-col">
-                        <span className="font-bold">{formatCurrency(product.discountPrice)}</span>
-                        <span className="text-xs text-muted-foreground line-through">{formatCurrency(product.price)}</span>
-                      </div>
-                    ) : formatCurrency(product.price)}
+                    <div className="flex flex-col">
+                      <span className="font-bold text-emerald-600">
+                        {formatCurrency(product.discountPrice || product.price)}
+                        <span className="text-xs text-muted-foreground font-normal">/{product.unitValue}{product.unit}</span>
+                      </span>
+                      {product.discountPrice && (
+                        <span className="text-xs text-muted-foreground line-through">
+                          {formatCurrency(product.price)}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <span className={product.stock === 0 ? "text-destructive font-bold" : ""}>

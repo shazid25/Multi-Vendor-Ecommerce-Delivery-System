@@ -63,7 +63,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
         vendorGroups.set(product.vendorId, existing);
       }
 
-      const commissionRate = Number(process.env.PLATFORM_COMMISSION_PERCENT || "10");
+      const commissionRate = Number(process.env.PLATFORM_COMMISSION_PERCENT || "5");
       for (const [vendorId, group] of vendorGroups.entries()) {
         const commission = (group.subtotal * commissionRate) / 100;
         await tx.vendorOrder.create({
@@ -225,13 +225,18 @@ export const markAsDelivered = async (req: AuthRequest, res: Response) => {
         data: { status: "DELIVERED" },
       });
 
+      let riderCommission = 0;
+
       if (order.deliveryAssignment) {
-        const fixedPayment = 80;
+        const grossEarnings = order.shippingCharge;
+        riderCommission = grossEarnings * 0.05;
+        const netEarnings = grossEarnings - riderCommission;
+
         await tx.deliveryPartner.update({
           where: { id: order.deliveryAssignment.deliveryPartnerId },
           data: {
-            totalEarnings: { increment: fixedPayment },
-            availableBalance: { increment: fixedPayment },
+            totalEarnings: { increment: netEarnings },
+            availableBalance: { increment: netEarnings },
             totalDeliveries: { increment: 1 },
           },
         });
@@ -240,7 +245,9 @@ export const markAsDelivered = async (req: AuthRequest, res: Response) => {
           data: {
             deliveryPartnerId: order.deliveryAssignment.deliveryPartnerId,
             orderId: order.id,
-            amount: fixedPayment,
+            amount: grossEarnings,
+            commissionAmount: riderCommission,
+            netAmount: netEarnings,
           }
         });
       }
@@ -256,29 +263,29 @@ export const markAsDelivered = async (req: AuthRequest, res: Response) => {
         });
       }
 
-      const totalCommission = order.vendorOrders.reduce((sum, vo) => sum + vo.commissionAmount, 0);
+      const totalVendorCommission = order.vendorOrders.reduce((sum, vo) => sum + vo.commissionAmount, 0);
+      const totalPlatformFee = totalVendorCommission + riderCommission;
       
       // Update platform balance (Admin)
       await tx.user.updateMany({
         where: { role: 'SUPER_ADMIN' },
         data: { 
-          platformBalance: { increment: totalCommission },
-          totalPlatformRevenue: { increment: totalCommission }
+          platformBalance: { increment: totalPlatformFee },
+          totalPlatformRevenue: { increment: totalPlatformFee }
         }
       });
 
       await tx.transaction.create({
         data: {
           orderId: order.id,
-          amount: totalCommission,
+          amount: totalPlatformFee,
           type: "PLATFORM_COMMISSION",
           userId: order.userId,
-          description: `Commission for order #${order.orderNumber}`,
+          description: `Platform fees for order #${order.orderNumber} (Vendor: ${totalVendorCommission.toFixed(2)}, Rider: ${riderCommission.toFixed(2)})`,
         },
       });
 
       // Update user totalSpent only if it wasn't already updated (e.g. by Stripe Webhook)
-      // Actually, to be safe, we can check if payment was already COMPLETED
       if (order.paymentStatus !== 'COMPLETED') {
         await tx.user.update({
           where: { id: order.userId },
@@ -338,52 +345,70 @@ export const getAvailableDeliveryPartners = async (req: AuthRequest, res: Respon
 
 export const assignDeliveryPartner = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) throw new AppError('Unauthorized', 401);
     const { orderId, deliveryPartnerId } = req.body;
 
-    const order = await prisma.$transaction(async (tx) => {
-      const vendor = await tx.vendor.findUnique({ where: { userId: req.user!.id } });
-      if (!vendor) throw new Error("Only vendors can assign partners");
-
-      const assignment = await tx.deliveryAssignment.upsert({
-        where: { orderId },
-        update: { deliveryPartnerId, vendorId: vendor.id },
-        create: { orderId, deliveryPartnerId, vendorId: vendor.id },
-      });
-
-      const updated = await tx.order.update({
-        where: { id: orderId },
-        data: {
-          deliveryAssignmentId: assignment.id,
-          status: "SHIPPED",
-        },
-      });
-      await tx.vendorOrder.updateMany({
-        where: { orderId },
-        data: { status: "SHIPPED" },
-      });
-
-      const dp = await tx.deliveryPartner.findUnique({
-        where: { id: deliveryPartnerId },
-      });
-      if (dp) {
-        await tx.notification.create({
-          data: {
-            userId: dp.userId,
-            title: "New Delivery Assignment 📦",
-            message: `You have been assigned a new delivery. Order: ${updated.orderNumber}`,
-            type: "info",
-            link: "/dashboard/delivery",
-          },
-        });
-      }
-
-      return updated;
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { vendorOrders: true },
     });
 
-    res.status(200).json(order);
+    if (!order) throw new AppError('Order not found', 404);
+    
+    // For simplicity, we assign based on the first vendor in the order
+    // In a more complex system, each vendor might have their own assignment
+    const vendorId = order.vendorOrders[0]?.vendorId;
+    if (!vendorId) throw new AppError('No vendor found for this order', 400);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const assignment = await tx.deliveryAssignment.upsert({
+        where: { orderId },
+        update: { deliveryPartnerId, vendorId },
+        create: { orderId, deliveryPartnerId, vendorId },
+      });
+
+      // Also create a Delivery record if it doesn't exist
+      await tx.delivery.upsert({
+        where: { orderId },
+        update: { deliveryPartnerId, assignmentId: assignment.id },
+        create: { orderId, deliveryPartnerId, assignmentId: assignment.id },
+      });
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: 'SHIPPED' }, // Or another appropriate status
+      });
+
+      return assignment;
+    });
+
+    res.status(200).json(result);
   } catch (error) {
     console.error('assignDeliveryPartner Error:', error);
-    res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to assign partner' });
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: 'Failed to assign delivery partner' });
+    }
+  }
+};
+
+export const getDeliveryEarnings = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) throw new AppError('Unauthorized', 401);
+
+    const dp = await prisma.deliveryPartner.findUnique({
+      where: { userId: req.user.id },
+    });
+    if (!dp) throw new AppError('Delivery partner not found', 404);
+
+    const earnings = await prisma.deliveryEarning.findMany({
+      where: { deliveryPartnerId: dp.id },
+      orderBy: { earnedAt: 'desc' },
+    });
+
+    res.status(200).json(earnings);
+  } catch (error) {
+    console.error('getDeliveryEarnings Error:', error);
+    res.status(500).json({ message: 'Failed to fetch earnings' });
   }
 };

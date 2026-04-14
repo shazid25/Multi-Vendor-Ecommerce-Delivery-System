@@ -188,13 +188,13 @@ export default function ShopPage() {
                           </div>
 
                           <div className="flex items-center justify-between">
-                            <div>
+                            <div className="flex flex-col">
                               {product.discountPrice ? (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg font-bold text-primary">
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-lg font-bold mart-gradient-text">
                                     {formatCurrency(product.discountPrice as number)}
                                   </span>
-                                  <span className="text-sm text-muted-foreground line-through">
+                                  <span className="text-[10px] text-muted-foreground line-through">
                                     {formatCurrency(product.price as number)}
                                   </span>
                                 </div>
@@ -203,9 +203,12 @@ export default function ShopPage() {
                                   {formatCurrency(product.price as number)}
                                 </span>
                               )}
+                              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
+                                per {product.unitValue as number}{product.unit as string}
+                              </span>
                             </div>
-                            <span className="text-xs text-muted-foreground">
-                              {(product.stock as number) > 0 ? `${product.stock} in stock` : "Out of stock"}
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${(product.stock as number) > 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"}`}>
+                              {(product.stock as number) > 0 ? `${product.stock} available` : "Out of stock"}
                             </span>
                           </div>
 

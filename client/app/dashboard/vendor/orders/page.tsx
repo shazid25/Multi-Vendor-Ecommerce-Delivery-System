@@ -134,7 +134,47 @@ export default function VendorOrders() {
                         <span className="text-xs text-muted-foreground italic">Unassigned</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right flex items-center justify-end gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline">Details</Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                          <DialogHeader>
+                            <DialogTitle>Order Details #{order.orderNumber}</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-xs font-bold uppercase text-muted-foreground">Customer</p>
+                                <p className="text-sm font-semibold">{user?.name}</p>
+                                <p className="text-xs text-muted-foreground">{user?.email}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold uppercase text-muted-foreground">Shipping Address</p>
+                                <p className="text-sm font-medium">{order.shippingAddress}</p>
+                                <p className="text-xs text-muted-foreground">{order.city} ({order.zone})</p>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold uppercase text-muted-foreground mb-2">Items</p>
+                              <div className="space-y-2">
+                                {order.items.map((item: any) => (
+                                  <div key={item.id} className="flex justify-between items-center text-sm p-2 rounded-lg bg-muted/50">
+                                    <span>{item.product.name} x {item.quantity}</span>
+                                    <span className="font-bold">{formatCurrency(item.subtotal)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="pt-2 border-t flex justify-between items-center">
+                              <span className="text-sm font-bold">Your Earnings (after 5% fee)</span>
+                              <span className="text-lg font-bold text-emerald-600">{formatCurrency(vo.vendorAmount)}</span>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+
                       {vo.status === "PENDING" && (
                         <Button size="sm" variant="success" onClick={() => handleAcceptOrder(order.id)} disabled={actionLoading === order.id}>
                           {actionLoading === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Accept"}

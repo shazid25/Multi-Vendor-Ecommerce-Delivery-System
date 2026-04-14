@@ -108,7 +108,7 @@ export default function DeliveryDashboardClient() {
                     <TableHead>Order</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Address</TableHead>
-                    <TableHead>Charge</TableHead>
+                    <TableHead>Net Earning</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
@@ -118,25 +118,26 @@ export default function DeliveryDashboardClient() {
                     const user = job.user as Record<string, string>;
                     const status = job.status as string;
                     const orderId = job.id as string;
+                    const netEarning = (job.shippingCharge as number) * 0.95;
                     return (
                       <TableRow key={orderId}>
                         <TableCell className="font-medium">#{(job.orderNumber as string || "").slice(-8)}</TableCell>
                         <TableCell>{user?.name}</TableCell>
                         <TableCell className="max-w-[150px] truncate text-sm">{job.shippingAddress as string}</TableCell>
-                        <TableCell>{formatCurrency(job.shippingCharge as number)}</TableCell>
+                        <TableCell className="font-bold text-emerald-600">{formatCurrency(netEarning)}</TableCell>
                         <TableCell>
-                          <Badge variant={status === "DELIVERED" ? "success" : status === "IN_TRANSIT" ? "info" : "warning"}>
-                            {status}
+                          <Badge variant={status === "DELIVERED" ? "success" : status === "SHIPPED" ? "info" : "warning"}>
+                            {status === "SHIPPED" ? "IN TRANSIT" : status}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            {status === "ASSIGNED" && (
+                            {status === "CONFIRMED" && (
                               <Button size="sm" onClick={() => handleStartTransit(orderId)} disabled={actionLoading === orderId}>
                                 {actionLoading === orderId ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Play className="w-3 h-3 mr-1" /> Start</>}
                               </Button>
                             )}
-                            {status === "IN_TRANSIT" && (
+                            {status === "SHIPPED" && (
                               <Button size="sm" variant="success" onClick={() => handleMarkDelivered(orderId)} disabled={actionLoading === `deliver-${orderId}`}>
                                 {actionLoading === `deliver-${orderId}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <><CheckCircle className="w-3 h-3 mr-1" /> Delivered</>}
                               </Button>

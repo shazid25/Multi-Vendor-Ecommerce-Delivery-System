@@ -22,12 +22,19 @@ export const getGlobalAnalytics = async (req: AuthRequest, res: Response) => {
       include: { user: { select: { name: true } } },
     });
 
+    const platformStats = await prisma.user.findFirst({
+      where: { role: 'SUPER_ADMIN' },
+      select: { platformBalance: true, totalPlatformRevenue: true },
+    });
+
     res.status(200).json({
       totalUsers,
       totalVendors,
       totalDeliveryPartners,
       totalOrders,
       totalCustomerSpend: totalSpent._sum.totalSpent || 0,
+      platformRevenue: platformStats?.totalPlatformRevenue || 0,
+      platformBalance: platformStats?.platformBalance || 0,
       recentOrders,
     });
   } catch (error) {
@@ -63,13 +70,13 @@ export const getDeliveryPartnerStats = async (req: AuthRequest, res: Response) =
       }),
     ]);
 
-    const todayEarnings = await prisma.order.aggregate({
-      where: { deliveryAssignment: { deliveryPartnerId: dp.id }, status: "DELIVERED", updatedAt: { gte: todayStart } },
-      _sum: { shippingCharge: true },
+    const todayEarnings = await prisma.deliveryEarning.aggregate({
+      where: { deliveryPartnerId: dp.id, earnedAt: { gte: todayStart } },
+      _sum: { netAmount: true },
     });
-    const monthEarnings = await prisma.order.aggregate({
-      where: { deliveryAssignment: { deliveryPartnerId: dp.id }, status: "DELIVERED", updatedAt: { gte: monthStart } },
-      _sum: { shippingCharge: true },
+    const monthEarnings = await prisma.deliveryEarning.aggregate({
+      where: { deliveryPartnerId: dp.id, earnedAt: { gte: monthStart } },
+      _sum: { netAmount: true },
     });
 
     res.status(200).json({
@@ -77,8 +84,8 @@ export const getDeliveryPartnerStats = async (req: AuthRequest, res: Response) =
       todayDeliveries,
       monthDeliveries,
       totalOrders,
-      todayEarnings: todayEarnings._sum?.shippingCharge || 0,
-      monthEarnings: monthEarnings._sum?.shippingCharge || 0,
+      todayEarnings: todayEarnings._sum?.netAmount || 0,
+      monthEarnings: monthEarnings._sum?.netAmount || 0,
     });
   } catch (error) {
     console.error('getDeliveryPartnerStats Error:', error);

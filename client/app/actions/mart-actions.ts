@@ -263,6 +263,10 @@ export async function startTransit(orderId: string) {
   return res;
 }
 
+export async function getDeliveryEarnings() {
+  return serverFetch("/delivery/earnings");
+}
+
 // ─── Admin / Super Admin Actions ────────────────────────────────────────────
 
 export async function getAllUsers() {
