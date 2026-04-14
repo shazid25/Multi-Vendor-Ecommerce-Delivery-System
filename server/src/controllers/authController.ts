@@ -134,6 +134,7 @@ export const updateUserRole = async (req: AuthRequest, res: Response) => {
             shopName: user.name + "'s Shop",
             phoneNumber: user.phone || '0000000000',
             businessType: 'General',
+            isVerified: true,
           }
         });
       }
@@ -148,6 +149,7 @@ export const updateUserRole = async (req: AuthRequest, res: Response) => {
             licenseNumber: 'TBD',
             licenseExpiry: new Date(),
             nidNumber: 'TBD',
+            isVerified: true,
           }
         });
       }

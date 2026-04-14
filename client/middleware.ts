@@ -30,7 +30,13 @@ export default async function middleware(request: NextRequest) {
 
   // 1. If not logged in and trying to access protected routes, redirect to login
   if (!session) {
-    if (pathname === "/dashboard" || pathname.startsWith("/dashboard/") || pathname.startsWith("/profile")) {
+    // Protected routes: dashboards, profile, checkout, and product details
+    const isDashboard = pathname.startsWith("/dashboard");
+    const isProfile = pathname.startsWith("/profile");
+    const isCheckout = pathname.startsWith("/checkout");
+    const isProductDetail = pathname.startsWith("/shop/") && pathname !== "/shop";
+
+    if (isDashboard || isProfile || isCheckout || isProductDetail) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     return NextResponse.next();
@@ -64,5 +70,5 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*"],
+  matcher: ["/dashboard/:path*", "/profile/:path*", "/checkout/:path*", "/shop/:path*"],
 };

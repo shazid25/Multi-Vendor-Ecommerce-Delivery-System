@@ -29,8 +29,10 @@ export function Footer() {
             <div className="space-y-2">
               {[
                 { href: "/shop", label: "Shop" },
+                { href: "/blog", label: "Blog" },
+                { href: "/faq", label: "FAQ" },
+                { href: "/help", label: "Help Center" },
                 { href: "/login", label: "Sign In" },
-                { href: "/login?mode=register", label: "Register" },
               ].map((link) => (
                 <Link
                   key={link.href}
@@ -74,4 +76,3 @@ export function Footer() {
     </footer>
   );
 }
-

@@ -121,3 +121,140 @@ export const deleteFAQ = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Failed to delete FAQ' });
   }
 };
+
+// Blogs
+export const getBlogs = async (req: AuthRequest, res: Response) => {
+  try {
+    const blogs = await prisma.blog.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.status(200).json(blogs);
+  } catch (error) {
+    console.error('getBlogs Error:', error);
+    res.status(500).json({ message: 'Failed to fetch blogs' });
+  }
+};
+
+export const getAllBlogs = async (req: AuthRequest, res: Response) => {
+  try {
+    const blogs = await prisma.blog.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    res.status(200).json(blogs);
+  } catch (error) {
+    console.error('getAllBlogs Error:', error);
+    res.status(500).json({ message: 'Failed to fetch blogs' });
+  }
+};
+
+export const getBlogBySlug = async (req: AuthRequest, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const blog = await prisma.blog.findUnique({
+      where: { slug },
+    });
+    if (!blog) return res.status(404).json({ message: 'Blog not found' });
+    res.status(200).json(blog);
+  } catch (error) {
+    console.error('getBlogBySlug Error:', error);
+    res.status(500).json({ message: 'Failed to fetch blog' });
+  }
+};
+
+export const createBlog = async (req: AuthRequest, res: Response) => {
+  try {
+    const data = req.body;
+    if (!data.slug) {
+      data.slug = data.title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+    }
+    const blog = await prisma.blog.create({ data });
+    res.status(201).json(blog);
+  } catch (error) {
+    console.error('createBlog Error:', error);
+    res.status(500).json({ message: 'Failed to create blog' });
+  }
+};
+
+export const updateBlog = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const data = req.body;
+    const blog = await prisma.blog.update({ where: { id }, data });
+    res.status(200).json(blog);
+  } catch (error) {
+    console.error('updateBlog Error:', error);
+    res.status(500).json({ message: 'Failed to update blog' });
+  }
+};
+
+export const deleteBlog = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.blog.delete({ where: { id } });
+    res.status(200).json({ message: 'Blog deleted successfully' });
+  } catch (error) {
+    console.error('deleteBlog Error:', error);
+    res.status(500).json({ message: 'Failed to delete blog' });
+  }
+};
+
+// Help
+export const getHelpEntries = async (req: AuthRequest, res: Response) => {
+  try {
+    const helpEntries = await prisma.help.findMany({
+      where: { isActive: true },
+      orderBy: { order: 'asc' },
+    });
+    res.status(200).json(helpEntries);
+  } catch (error) {
+    console.error('getHelpEntries Error:', error);
+    res.status(500).json({ message: 'Failed to fetch help entries' });
+  }
+};
+
+export const getAllHelpEntries = async (req: AuthRequest, res: Response) => {
+  try {
+    const helpEntries = await prisma.help.findMany({
+      orderBy: { order: 'asc' },
+    });
+    res.status(200).json(helpEntries);
+  } catch (error) {
+    console.error('getAllHelpEntries Error:', error);
+    res.status(500).json({ message: 'Failed to fetch help entries' });
+  }
+};
+
+export const createHelpEntry = async (req: AuthRequest, res: Response) => {
+  try {
+    const data = req.body;
+    const helpEntry = await prisma.help.create({ data });
+    res.status(201).json(helpEntry);
+  } catch (error) {
+    console.error('createHelpEntry Error:', error);
+    res.status(500).json({ message: 'Failed to create help entry' });
+  }
+};
+
+export const updateHelpEntry = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const data = req.body;
+    const helpEntry = await prisma.help.update({ where: { id }, data });
+    res.status(200).json(helpEntry);
+  } catch (error) {
+    console.error('updateHelpEntry Error:', error);
+    res.status(500).json({ message: 'Failed to update help entry' });
+  }
+};
+
+export const deleteHelpEntry = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.help.delete({ where: { id } });
+    res.status(200).json({ message: 'Help entry deleted successfully' });
+  } catch (error) {
+    console.error('deleteHelpEntry Error:', error);
+    res.status(500).json({ message: 'Failed to delete help entry' });
+  }
+};

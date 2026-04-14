@@ -118,6 +118,7 @@ export const approveRoleRequest = async (req: AuthRequest, res: Response) => {
             phoneNumber: roleRequest.phoneNumber || "",
             businessType: roleRequest.businessType || "General",
             shopDescription: roleRequest.shopDescription,
+            isVerified: true,
           },
         });
       } else {
@@ -130,6 +131,7 @@ export const approveRoleRequest = async (req: AuthRequest, res: Response) => {
             licenseExpiry: roleRequest.licenseExpiry || new Date(),
             nidNumber: roleRequest.nidNumber || "TBD",
             nidImage: roleRequest.nidImage,
+            isVerified: true,
           },
         });
       }

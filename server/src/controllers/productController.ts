@@ -47,6 +47,7 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
             shopName: user.name + "'s Shop",
             phoneNumber: user.phone || '0000000000',
             businessType: 'General',
+            isVerified: true,
           }
         });
       } else {

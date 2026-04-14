@@ -43,6 +43,9 @@ export function Navbar() {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
+    { href: "/blog", label: "Blog" },
+    { href: "/faq", label: "FAQ" },
+    { href: "/help", label: "Help" },
   ];
 
   const getDashboardPath = () => {
@@ -254,4 +257,3 @@ export function Navbar() {
     </motion.nav>
   );
 }
-

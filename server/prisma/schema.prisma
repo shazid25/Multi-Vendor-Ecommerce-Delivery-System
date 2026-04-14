@@ -1049,3 +1049,31 @@ model FAQ {
 
   @@index([isActive])
 }
+
+model Blog {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String
+  image       String?
+  author      String   @default("Admin")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([slug])
+}
+
+model Help {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  category    String?  @default("General")
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+}

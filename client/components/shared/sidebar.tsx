@@ -24,6 +24,8 @@ import {
   Bell,
   Image,
   HelpCircle,
+  BookOpen,
+  LifeBuoy,
 } from "lucide-react";
 import { signOut, useSession } from "@/lib/auth-client";
 import { ThemeToggle } from "./theme-toggle";
@@ -62,7 +64,9 @@ const roleLinks: Record<string, SidebarLink[]> = {
     { href: "/dashboard/super-admin/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/dashboard/super-admin/requests", label: "Role Requests", icon: Shield },
     { href: "/dashboard/super-admin/banners", label: "Banners", icon: Image },
+    { href: "/dashboard/super-admin/blogs", label: "Blogs", icon: BookOpen },
     { href: "/dashboard/super-admin/faqs", label: "FAQs", icon: HelpCircle },
+    { href: "/dashboard/super-admin/help", label: "Help Center", icon: LifeBuoy },
   ],
 };
 
@@ -145,10 +149,9 @@ export function DashboardSidebar() {
           const Icon = link.icon;
           return (
             <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)}>
-              <motion.div
-                whileHover={{ x: 4 }}
+              <div
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
                   isActive
                     ? "bg-primary/10 text-primary shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -162,7 +165,7 @@ export function DashboardSidebar() {
                     className="absolute left-0 w-1 h-6 rounded-r-full bg-primary"
                   />
                 )}
-              </motion.div>
+              </div>
             </Link>
           );
         })}
@@ -236,4 +239,3 @@ export function DashboardSidebar() {
     </>
   );
 }
-
