@@ -24,7 +24,6 @@ To explore the different roles and dashboards, use the following test accounts:
 
 ## 🏗️ System Architecture
 
-*(Note: Replace the URL above with the actual path to the diagram image you saved)*
 
 The system is built on a **Modular Monolith** backend architecture with a highly responsive, animated frontend. It ensures strict data integrity through Zod schema validation and Prisma’s type-safe database queries.
 
