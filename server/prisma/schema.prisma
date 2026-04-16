@@ -248,6 +248,11 @@ model Order {
   zone                  LocationZone
   shippingCharge        Float
   
+  // Customer contact information
+  customerPhone         String?
+  customerName          String?
+  customerEmail         String?
+  
   subtotal              Float
   totalAmount           Float
   platformCommission    Float     @default(0)

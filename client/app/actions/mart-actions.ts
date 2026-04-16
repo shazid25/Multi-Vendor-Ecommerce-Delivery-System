@@ -193,6 +193,8 @@ export async function placeOrder(data: {
   city: string;
   shippingAddress: string;
   paymentMethod: 'STRIPE' | 'CASH_ON_DELIVERY';
+  customerPhone: string;
+  customerName: string;
 }) {
   const res = await serverFetch("/orders", {
     method: "POST",

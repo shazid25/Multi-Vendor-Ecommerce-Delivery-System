@@ -6,38 +6,39 @@ import { AppError } from '../middleware/error.js';
 export const placeOrder = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) throw new AppError('Unauthorized', 401);
-    const { items, city, shippingAddress, paymentMethod } = req.body;
+    const { items, city, shippingAddress, paymentMethod, customerPhone, customerName } = req.body;
 
+    if (!customerPhone) throw new AppError('Phone number is required', 400);
+    if (!customerName) throw new AppError('Customer name is required', 400);
+
+    // Step 1: Validate products and calculate totals (without transaction)
+    let subtotal = 0;
+    const orderItems: Array<any> = [];
+
+    for (const item of items) {
+      const product = await prisma.product.findUnique({ where: { id: item.productId } });
+      if (!product) throw new Error(`Product not found: ${item.productId}`);
+      if (product.stock < item.quantity) throw new Error(`Insufficient stock for ${product.name}`);
+
+      const itemPrice = product.discountPrice || product.price;
+      const itemSubtotal = itemPrice * item.quantity;
+      subtotal += itemSubtotal;
+      orderItems.push({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: itemPrice,
+        subtotal: itemSubtotal,
+      });
+    }
+
+    const shippingCharge = city.toLowerCase().includes('dhaka') ? 80 : 120;
+    const totalAmount = subtotal + shippingCharge;
+    const orderNumber = `MART-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    const zone = city.toLowerCase().includes('dhaka') ? 'DHAKA' : 'OUTSIDE_DHAKA';
+
+    // Step 2: Create order and vendor orders in transaction
     const result = await prisma.$transaction(async (tx) => {
-      let subtotal = 0;
-      const orderItems: Array<any> = [];
-
-      for (const item of items) {
-        const product = await tx.product.findUnique({ where: { id: item.productId } });
-        if (!product) throw new Error(`Product not found: ${item.productId}`);
-        if (product.stock < item.quantity) throw new Error(`Insufficient stock for ${product.name}`);
-
-        const itemPrice = product.discountPrice || product.price;
-        const itemSubtotal = itemPrice * item.quantity;
-        subtotal += itemSubtotal;
-        orderItems.push({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: itemPrice,
-          subtotal: itemSubtotal,
-        });
-
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
-      }
-
-      const shippingCharge = city.toLowerCase().includes('dhaka') ? 80 : 120;
-      const totalAmount = subtotal + shippingCharge;
-      const orderNumber = `MART-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-      const zone = city.toLowerCase().includes('dhaka') ? 'DHAKA' : 'OUTSIDE_DHAKA';
-
+      // Create order
       const order = await tx.order.create({
         data: {
           userId: req.user!.id,
@@ -48,12 +49,15 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
           totalAmount,
           city,
           shippingAddress,
+          customerPhone,
+          customerName,
           paymentMethod: paymentMethod || 'STRIPE',
           items: { create: orderItems },
         },
         include: { items: { include: { product: true } } },
       });
 
+      // Create vendor orders
       const vendorGroups = new Map<string, { subtotal: number }>();
       const createdItems = (order as any).items || [];
       for (const item of createdItems) {
@@ -78,6 +82,14 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
 
       return order;
     });
+
+    // Step 3: Update product stock (after transaction completes)
+    for (const item of orderItems) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: { stock: { decrement: item.quantity } },
+      });
+    }
 
     res.status(201).json(result);
   } catch (error) {

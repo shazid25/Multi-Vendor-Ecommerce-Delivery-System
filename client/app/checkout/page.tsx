@@ -20,6 +20,8 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState({
     city: "Dhaka",
     street: "",
+    phone: "",
+    name: "",
   });
 
   const shippingCharge = address.city.toLowerCase().includes("dhaka") ? 80 : 120;
@@ -27,6 +29,8 @@ export default function CheckoutPage() {
 
   const handleCheckout = async () => {
     if (!address.street) return toast.error("Please enter your shipping address");
+    if (!address.phone) return toast.error("Please enter your phone number");
+    if (!address.name) return toast.error("Please enter your name");
     setLoading(true);
 
     try {
@@ -36,6 +40,8 @@ export default function CheckoutPage() {
         city: address.city,
         shippingAddress: address.street,
         paymentMethod: paymentMethod,
+        customerPhone: address.phone,
+        customerName: address.name,
       });
 
       if (!orderRes.success) throw new Error(orderRes.error);
@@ -50,7 +56,10 @@ export default function CheckoutPage() {
 
         if (!stripeRes.success) throw new Error(stripeRes.error);
 
-        // 3. Redirect to Stripe
+        // 3. Clear cart before redirecting to Stripe
+        clearCart();
+        
+        // 4. Redirect to Stripe
         if (stripeRes.url) {
           window.location.href = stripeRes.url;
         }
@@ -89,6 +98,23 @@ export default function CheckoutPage() {
                 <MapPin className="w-5 h-5 text-primary" /> Shipping Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <Input 
+                    placeholder="Your full name" 
+                    value={address.name} 
+                    onChange={e => setAddress({...address, name: e.target.value})} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone Number</Label>
+                  <Input 
+                    placeholder="+880123456789" 
+                    type="tel"
+                    value={address.phone} 
+                    onChange={e => setAddress({...address, phone: e.target.value})} 
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label>City</Label>
                   <Input value={address.city} onChange={e => setAddress({...address, city: e.target.value})} />

@@ -36,10 +36,6 @@ export function Navbar() {
 
   React.useEffect(() => setMobileOpen(false), [pathname]);
 
-  const isDashboard = pathname.startsWith("/dashboard");
-
-  if (isDashboard) return null;
-
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
@@ -236,7 +232,40 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              {!session?.user && (
+              
+              {session?.user ? (
+                <div className="pt-2 space-y-2 border-t border-border mt-2">
+                  <div className="px-4 py-2 border-b border-border mb-1">
+                    <p className="text-sm font-medium">{session.user.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {session.user.email}
+                    </p>
+                  </div>
+                  <Link
+                    href={getDashboardPath()}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    <LayoutDashboard className="w-4 h-4" /> Dashboard
+                  </Link>
+                  <Link
+                    href="/profile"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    <User className="w-4 h-4" /> Profile
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setMobileOpen(false);
+                      signOut();
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 w-full"
+                  >
+                    <LogOut className="w-4 h-4" /> Sign out
+                  </button>
+                </div>
+              ) : (
                 <div className="pt-2 space-y-2 border-t border-border mt-2">
                   <Link href="/login">
                     <Button variant="outline" className="w-full" size="sm">

@@ -146,14 +146,25 @@ export default function VendorOrders() {
                           <div className="space-y-4 py-4">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <p className="text-xs font-bold uppercase text-muted-foreground">Customer</p>
-                                <p className="text-sm font-semibold">{user?.name}</p>
-                                <p className="text-xs text-muted-foreground">{user?.email}</p>
+                                <p className="text-xs font-bold uppercase text-muted-foreground">Customer Name</p>
+                                <p className="text-sm font-semibold">{order.customerName || user?.name}</p>
                               </div>
                               <div>
-                                <p className="text-xs font-bold uppercase text-muted-foreground">Shipping Address</p>
-                                <p className="text-sm font-medium">{order.shippingAddress}</p>
-                                <p className="text-xs text-muted-foreground">{order.city} ({order.zone})</p>
+                                <p className="text-xs font-bold uppercase text-muted-foreground">Phone Number</p>
+                                <p className="text-sm font-semibold flex items-center gap-1">
+                                  <Phone className="w-4 h-4 text-primary" />
+                                  {order.customerPhone}
+                                </p>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Shipping Address</p>
+                              <div className="flex gap-2 text-sm">
+                                <MapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="font-semibold">{order.shippingAddress}</p>
+                                  <p className="text-xs text-muted-foreground">{order.city} ({order.zone})</p>
+                                </div>
                               </div>
                             </div>
                             <div>

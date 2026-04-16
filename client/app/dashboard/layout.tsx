@@ -2,6 +2,8 @@
 
 import React from "react";
 import { DashboardSidebar } from "@/components/shared/sidebar";
+import { Navbar } from "@/components/shared/navbar";
+import { Footer } from "@/components/shared/footer";
 import { useSession } from "@/lib/auth-client";
 import { SkeletonDashboard } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
@@ -30,19 +32,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!session?.user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardSidebar />
-      <motion.main
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        className="lg:pl-[280px] min-h-screen"
-      >
-        <div className="p-6 md:p-8 pt-20 lg:pt-8 max-w-7xl mx-auto">
-          {children}
-        </div>
-      </motion.main>
-    </div>
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-background">
+        <DashboardSidebar />
+        <motion.main
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="lg:pl-[280px] min-h-screen"
+        >
+          <div className="p-6 md:p-8 pt-20 lg:pt-8 max-w-7xl mx-auto">
+            {children}
+          </div>
+        </motion.main>
+      </div>
+      <Footer />
+    </>
   );
 }
 
