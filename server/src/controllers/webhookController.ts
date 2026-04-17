@@ -42,11 +42,34 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
             include: { vendorOrders: true }
           });
 
-          // 2. Update all VendorOrders to CONFIRMED
-          await tx.vendorOrder.updateMany({
-            where: { orderId },
-            data: { status: 'CONFIRMED' }
-          });
+          // 2. Update all VendorOrders to CONFIRMED and add balance to vendors
+          for (const vo of order.vendorOrders) {
+            await tx.vendorOrder.update({
+              where: { id: vo.id },
+              data: { status: 'CONFIRMED' }
+            });
+
+            // Add vendor's share to their balance immediately for Stripe payments
+            // This includes their subtotal minus commission
+            await tx.vendor.update({
+              where: { id: vo.vendorId },
+              data: {
+                balance: { increment: vo.vendorAmount },
+                totalSales: { increment: vo.vendorAmount }
+              }
+            });
+          }
+
+          // Add shipping charge to the first vendor's balance
+          // They will "hold" it until delivery, then it will be deducted to pay the rider
+          if (order.vendorOrders.length > 0) {
+            await tx.vendor.update({
+              where: { id: order.vendorOrders[0].vendorId },
+              data: {
+                balance: { increment: order.shippingCharge }
+              }
+            });
+          }
 
           // 3. Update User's totalSpent (Optional: can also do this at delivery)
           // The user specifically asked for updates to every role upon success

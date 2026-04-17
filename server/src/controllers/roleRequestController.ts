@@ -132,6 +132,8 @@ export const approveRoleRequest = async (req: AuthRequest, res: Response) => {
             nidNumber: roleRequest.nidNumber || "TBD",
             nidImage: roleRequest.nidImage,
             isVerified: true,
+            isActive: true,
+            // isAvailable: true, // Not needed since we removed availability filtering
           },
         });
       }

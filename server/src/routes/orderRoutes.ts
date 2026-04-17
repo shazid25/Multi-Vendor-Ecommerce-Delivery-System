@@ -5,6 +5,7 @@ import {
   getVendorOrders, 
   acceptOrder, 
   getDeliveryJobs, 
+  getDeliveryPartnerStats,
   markAsDelivered, 
   startTransit,
   getAvailableDeliveryPartners,
@@ -19,6 +20,7 @@ router.get('/', authMiddleware, getOrders);
 router.get('/vendor', authMiddleware, requireRole('VENDOR'), getVendorOrders);
 router.patch('/:id/accept', authMiddleware, requireRole('VENDOR'), acceptOrder);
 router.get('/delivery', authMiddleware, requireRole('DELIVERY_PARTNER'), getDeliveryJobs);
+router.get('/delivery/stats', authMiddleware, requireRole('DELIVERY_PARTNER'), getDeliveryPartnerStats);
 router.patch('/:id/deliver', authMiddleware, requireRole('DELIVERY_PARTNER'), markAsDelivered);
 router.patch('/:id/transit', authMiddleware, requireRole('DELIVERY_PARTNER'), startTransit);
 

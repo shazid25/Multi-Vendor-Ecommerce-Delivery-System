@@ -5,7 +5,11 @@ import { headers, cookies } from "next/headers";
 import Stripe from "stripe";
 
 // Determine the internal API_URL for server-to-server calls.
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+const RAW_API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NEXT_PUBLIC_SERVER_URL ? `${process.env.NEXT_PUBLIC_SERVER_URL}/api` : "") ||
+  "http://127.0.0.1:5000/api";
+const API_URL = RAW_API_URL.replace(/\/$/, "");
 
 // ─── Stripe Initialization ──────────────────────────────────────────────────
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -20,24 +24,34 @@ async function serverFetch(endpoint: string, options: RequestInit = {}) {
   const cookieHeader = cookieStore.toString();
   
   // Use absolute URL for server-side fetches
-  const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
+  const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${normalizedEndpoint}`;
 
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "Cookie": cookieHeader,
-      ...options.headers,
-    },
-  });
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        "Cookie": cookieHeader,
+        ...options.headers,
+      },
+      cache: "no-store",
+    });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    return { success: false, error: errorData.message || res.statusText };
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      return { success: false, error: errorData.message || res.statusText };
+    }
+
+    const data = await res.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error("serverFetch network error:", { url, error });
+    return {
+      success: false,
+      error: "Unable to connect to backend API. Please ensure server is running.",
+    };
   }
-
-  const data = await res.json();
-  return { success: true, data };
 }
 
 // ─── Get Current Session (server-side) ──────────────────────────────────────
@@ -245,6 +259,10 @@ export async function getDeliveryJobs() {
   return serverFetch("/orders/delivery");
 }
 
+export async function getDeliveryPartnerStats() {
+  return serverFetch("/orders/delivery/stats");
+}
+
 export async function markAsDelivered(orderId: string) {
   const res = await serverFetch(`/orders/${orderId}/deliver`, {
     method: "PATCH",
@@ -310,10 +328,6 @@ export async function getGlobalAnalytics() {
 
 export async function getNotifications() {
   return serverFetch("/auth/notifications");
-}
-
-export async function getDeliveryPartnerStats() {
-  return serverFetch("/analytics/delivery");
 }
 
 export async function getVendorStats() {

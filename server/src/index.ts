@@ -1,6 +1,10 @@
 import 'dotenv/config';
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
+
+// Load environment variables
+import dotenv from 'dotenv';
+dotenv.config();
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth/config.js";
 

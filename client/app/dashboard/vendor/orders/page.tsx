@@ -19,6 +19,8 @@ export default function VendorOrders() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [isBulkAssignDialogOpen, setIsBulkAssignDialogOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -62,6 +64,54 @@ export default function VendorOrders() {
     }
   };
 
+  const handleOrderSelection = (orderId: string, checked: boolean) => {
+    const newSelected = new Set(selectedOrders);
+    if (checked) {
+      newSelected.add(orderId);
+    } else {
+      newSelected.delete(orderId);
+    }
+    setSelectedOrders(newSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const assignableOrderIds = vendorOrders
+        .filter(vo => vo.status === "CONFIRMED" && !vo.order.deliveryAssignment)
+        .map(vo => vo.order.id);
+      setSelectedOrders(new Set(assignableOrderIds));
+    } else {
+      setSelectedOrders(new Set());
+    }
+  };
+
+  const handleBulkAssignDP = async (dpId: string) => {
+    if (selectedOrders.size === 0) return;
+    setActionLoading(`bulk-assign-${dpId}`);
+    const orderIds = Array.from(selectedOrders);
+    
+    try {
+      const promises = orderIds.map(orderId => assignDeliveryPartner(orderId, dpId));
+      const results = await Promise.all(promises);
+      
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.length - successCount;
+      
+      if (successCount > 0) {
+        toast.success(`${successCount} order(s) assigned successfully${failCount > 0 ? `, ${failCount} failed` : ''}`);
+        setIsBulkAssignDialogOpen(false);
+        setSelectedOrders(new Set());
+        loadData();
+      } else {
+        toast.error("Failed to assign any orders");
+      }
+    } catch (error) {
+      toast.error("Bulk assignment failed");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>;
 
   const pendingCount = vendorOrders.filter(vo => vo.status === "PENDING").length;
@@ -83,9 +133,70 @@ export default function VendorOrders() {
         </BentoGrid>
 
         <GlassCard className="p-6">
+          {/* Bulk Actions */}
+          {selectedOrders.size > 0 && (
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg flex items-center justify-between">
+              <span className="text-sm font-medium">{selectedOrders.size} order(s) selected</span>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => setSelectedOrders(new Set())}
+                >
+                  Clear Selection
+                </Button>
+                <Dialog open={isBulkAssignDialogOpen} onOpenChange={setIsBulkAssignDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="gradient">
+                      <Truck className="w-4 h-4 mr-2" />
+                      Assign to Partner
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[450px]">
+                    <DialogHeader>
+                      <DialogTitle>Assign Selected Orders to Delivery Partner</DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[300px] py-4">
+                      <div className="space-y-3 px-4">
+                        {deliveryPartners.length === 0 ? (
+                          <p className="text-center text-muted-foreground py-8">No available partners found</p>
+                        ) : (
+                          deliveryPartners.map((partner) => (
+                            <div key={partner.id} className="flex items-center justify-between p-3 rounded-xl border hover:bg-muted/50 transition-colors">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full mart-gradient-bg flex items-center justify-center text-white font-bold">
+                                  {partner.user.name[0]}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold">{partner.user.name}</p>
+                                  <p className="text-xs text-muted-foreground">{partner.vehicleType}</p>
+                                </div>
+                              </div>
+                              <Button size="sm" onClick={() => handleBulkAssignDP(partner.id)} disabled={actionLoading === `bulk-assign-${partner.id}`}>
+                                {actionLoading === `bulk-assign-${partner.id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : "Assign All"}
+                              </Button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          )}
+
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedOrders.size > 0 && selectedOrders.size === vendorOrders.filter(vo => vo.status === "CONFIRMED" && !vo.order.deliveryAssignment).length && vendorOrders.filter(vo => vo.status === "CONFIRMED" && !vo.order.deliveryAssignment).length > 0}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="rounded"
+                  />
+                </TableHead>
                 <TableHead>Order #</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Amount</TableHead>
@@ -103,6 +214,16 @@ export default function VendorOrders() {
 
                 return (
                   <TableRow key={vo.id}>
+                    <TableCell>
+                      {vo.status === "CONFIRMED" && !vo.order.deliveryAssignment && (
+                        <input
+                          type="checkbox"
+                          checked={selectedOrders.has(order.id)}
+                          onChange={(e) => handleOrderSelection(order.id, e.target.checked)}
+                          className="rounded"
+                        />
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">#{order.orderNumber}</TableCell>
                     <TableCell>
                       <div className="flex flex-col text-xs">
@@ -191,6 +312,7 @@ export default function VendorOrders() {
                           {actionLoading === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Accept"}
                         </Button>
                       )}
+
                       {vo.status === "CONFIRMED" && (
                         <Dialog open={isAssignDialogOpen && selectedOrderId === order.id} onOpenChange={(open) => {
                           setIsAssignDialogOpen(open);
@@ -206,7 +328,7 @@ export default function VendorOrders() {
                               <DialogTitle>Assign Delivery Partner</DialogTitle>
                             </DialogHeader>
                             <ScrollArea className="max-h-[300px] py-4">
-                              <div className="space-y-3">
+                              <div className="space-y-3 px-4">
                                 {deliveryPartners.length === 0 ? (
                                   <p className="text-center text-muted-foreground py-8">No available partners found</p>
                                 ) : (
@@ -238,7 +360,7 @@ export default function VendorOrders() {
               })}
               {vendorOrders.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No orders found</TableCell>
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">No orders found</TableCell>
                 </TableRow>
               )}
             </TableBody>

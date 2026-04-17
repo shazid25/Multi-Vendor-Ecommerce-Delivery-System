@@ -200,7 +200,15 @@ export default function DeliveryJobs() {
     const res = await markAsDelivered(orderId);
     setActionLoading(null);
     if (res.success) {
-      toast.success("Order marked as delivered! ৳80 added to your balance.");
+      // Calculate net earnings after 5% fee
+      const order = jobs.find(j => j.id === orderId);
+      if (order) {
+        const grossEarnings = order.shippingCharge;
+        const netEarnings = grossEarnings * 0.95; // After 5% platform fee
+        toast.success(`Order delivered! ${formatCurrency(netEarnings)} added to your wallet.`);
+      } else {
+        toast.success("Order marked as delivered!");
+      }
       loadData();
     } else {
       toast.error(res.error || "Failed to mark as delivered");
@@ -209,7 +217,10 @@ export default function DeliveryJobs() {
 
   if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>;
 
-  const activeJobs = jobs.filter(j => j.status !== "DELIVERED" && j.status !== "CANCELLED");
+  const activeJobs = jobs.filter(j => {
+    const deliveryStatus = j.delivery?.status || j.status;
+    return deliveryStatus !== "DELIVERED" && deliveryStatus !== "CANCELLED" && deliveryStatus !== "FAILED";
+  });
 
   return (
     <PageTransition>
@@ -235,16 +246,20 @@ export default function DeliveryJobs() {
             </GlassCard>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {activeJobs.map((job) => (
+              {activeJobs.map((job) => {
+                const deliveryStatus = job.delivery?.status || job.status;
+
+                return (
                 <GlassCard key={job.id} className="p-6">
                   <div className="flex justify-between items-start mb-6">
-                    <div>
-                      <Badge className="mb-2">{job.status}</Badge>
+                    <div className="flex-1 min-w-0">
+                      <Badge className="mb-2">{deliveryStatus}</Badge>
                       <h4 className="text-lg font-bold">Order #{job.orderNumber}</h4>
-                      <p className="text-xs text-muted-foreground">Assigned {formatDate(job.updatedAt)}</p>
+                      <p className="text-xs text-muted-foreground">Assigned {formatDate(job.createdAt)}</p>
                     </div>
-                    <div className="p-3 rounded-full bg-primary/10 text-primary">
-                      <Truck className="w-6 h-6" />
+                    <div className="text-right ml-4 flex-shrink-0">
+                      <p className="text-xs text-muted-foreground">Delivery Charge</p>
+                      <p className="text-lg font-bold text-emerald-600">{formatCurrency(job.shippingCharge)}</p>
                     </div>
                   </div>
 
@@ -256,7 +271,7 @@ export default function DeliveryJobs() {
                       <div>
                         <p className="text-xs font-bold uppercase text-muted-foreground">Delivery Address</p>
                         <p className="text-sm font-medium">{job.shippingAddress}</p>
-                        <p className="text-xs text-muted-foreground">{job.city}</p>
+                        <p className="text-xs text-muted-foreground">{job.city} ({job.zone})</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -265,28 +280,48 @@ export default function DeliveryJobs() {
                       </div>
                       <div>
                         <p className="text-xs font-bold uppercase text-muted-foreground">Customer Contact</p>
-                        <p className="text-sm font-medium">{job.user.name}</p>
-                        <p className="text-xs text-muted-foreground">{job.user.email}</p>
+                        <p className="text-sm font-medium">{job.customerName || job.user?.name}</p>
+                        <p className="text-xs text-muted-foreground">{job.customerPhone || job.user?.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+                        <Package className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase text-muted-foreground">Items to Deliver</p>
+                        <div className="space-y-1 mt-2">
+                          {job.items?.map((item: any) => (
+                            <div key={item.id} className="text-xs">
+                              <span className="font-medium">{item.product?.name}</span>
+                              <span className="text-muted-foreground"> × {item.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex gap-3">
-                    {job.status === "CONFIRMED" ? (
+                    {(deliveryStatus === "ASSIGNED" || deliveryStatus === "PICKED_UP" || deliveryStatus === "CONFIRMED") ? (
                       <Button className="flex-1" variant="outline" onClick={() => handleStartTransit(job.id)} disabled={actionLoading === `transit-${job.id}`}>
                         {actionLoading === `transit-${job.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Transit"}
                       </Button>
-                    ) : (
+                    ) : (deliveryStatus === "IN_TRANSIT" || deliveryStatus === "SHIPPED") ? (
                       <Button className="flex-1" variant="success" onClick={() => handleMarkDelivered(job.id)} disabled={actionLoading === `delivered-${job.id}`}>
                         {actionLoading === `delivered-${job.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : "Mark Delivered"}
                       </Button>
+                    ) : (
+                      <Button className="flex-1" disabled variant="outline">
+                        {deliveryStatus}
+                      </Button>
                     )}
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="icon" title="Open in Maps">
                       <Navigation className="w-4 h-4" />
                     </Button>
                   </div>
                 </GlassCard>
-              ))}
+              )})}
             </div>
           )}
         </div>
