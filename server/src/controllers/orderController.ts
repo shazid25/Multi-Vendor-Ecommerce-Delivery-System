@@ -381,84 +381,62 @@ export const markAsDelivered = async (req: AuthRequest, res: Response) => {
         },
       });
 
-      let riderCommission = 0;
+      // Calculate delivery partner earnings with 5% platform fee
+      let riderNetEarnings = 0;
+      let riderPlatformFee = 0;
 
       if (order.deliveryAssignment) {
-        // Rider commission is only applied for Stripe payments
-        if (order.paymentStatus === 'COMPLETED') {
-          const grossEarnings = order.shippingCharge;
-          riderCommission = grossEarnings * 0.05;
-          const netEarnings = grossEarnings - riderCommission;
+        const grossShippingCharge = order.shippingCharge;
+        riderPlatformFee = grossShippingCharge * 0.05; // 5% platform fee
+        riderNetEarnings = grossShippingCharge - riderPlatformFee; // Rider gets 95%
 
-          await tx.deliveryPartner.update({
-            where: { id: order.deliveryAssignment.deliveryPartnerId },
-            data: {
-              totalEarnings: { increment: netEarnings },
-              availableBalance: { increment: netEarnings },
-              totalDeliveries: { increment: 1 },
-              // isAvailable: true, // Removed since we don't mark unavailable
-            },
-          });
-          
-          await tx.deliveryEarning.create({
-            data: {
-              deliveryPartnerId: order.deliveryAssignment.deliveryPartnerId,
-              orderId: order.id,
-              amount: grossEarnings,
-              commissionAmount: riderCommission,
-              netAmount: netEarnings,
-            }
-          });
-
-          // For Stripe: deduct shipping charge from vendor (they received it in webhook)
-          await tx.vendor.update({
-            where: { id: order.deliveryAssignment.vendorId },
-            data: {
-              balance: { decrement: order.shippingCharge }
-            }
-          });
-        } else {
-          // For COD: rider gets full shipping charge, no commission
-          await tx.deliveryPartner.update({
-            where: { id: order.deliveryAssignment.deliveryPartnerId },
-            data: {
-              totalEarnings: { increment: order.shippingCharge },
-              availableBalance: { increment: order.shippingCharge },
-              totalDeliveries: { increment: 1 },
-            },
-          });
-          
-          await tx.deliveryEarning.create({
-            data: {
-              deliveryPartnerId: order.deliveryAssignment.deliveryPartnerId,
-              orderId: order.id,
-              amount: order.shippingCharge,
-              commissionAmount: 0, // No commission for COD
-              netAmount: order.shippingCharge,
-            }
-          });
-        }
+        await tx.deliveryPartner.update({
+          where: { id: order.deliveryAssignment.deliveryPartnerId },
+          data: {
+            totalEarnings: { increment: riderNetEarnings },
+            availableBalance: { increment: riderNetEarnings },
+            totalDeliveries: { increment: 1 },
+          },
+        });
+        
+        await tx.deliveryEarning.create({
+          data: {
+            deliveryPartnerId: order.deliveryAssignment.deliveryPartnerId,
+            orderId: order.id,
+            amount: grossShippingCharge,
+            commissionAmount: riderPlatformFee,
+            netAmount: riderNetEarnings,
+          }
+        });
       }
 
-      // Handle vendor income
-      // For Stripe: vendor already received payment via webhook, just add product earnings to balance
-      // For COD: vendor gets paid their product earnings now
+      // Handle vendor income with 5% platform fee
+      let totalVendorPlatformFee = 0;
+
       for (const vo of order.vendorOrders) {
+        const grossVendorAmount = vo.vendorAmount; // This is already after the initial 5% deduction during order creation
+        // Now deduct another 5% from what they earned for platform fee during delivery
+        const vendorPlatformFee = grossVendorAmount * 0.05;
+        const netVendorEarnings = grossVendorAmount - vendorPlatformFee;
+        
+        totalVendorPlatformFee += vendorPlatformFee;
+
         if (order.paymentStatus === 'COMPLETED') {
-          // Stripe: vendor already got paid, just update stats
+          // Stripe: vendor already got initial payment in webhook, now deduct 5% platform fee
           await tx.vendor.update({
             where: { id: vo.vendorId },
             data: {
+              balance: { decrement: vendorPlatformFee },
               totalSales: { increment: vo.vendorAmount },
               totalOrders: { increment: 1 },
             },
           });
         } else {
-          // COD: vendor gets paid now
+          // COD: vendor gets paid net amount after 5% platform fee
           await tx.vendor.update({
             where: { id: vo.vendorId },
             data: {
-              balance: { increment: vo.vendorAmount },
+              balance: { increment: netVendorEarnings },
               totalSales: { increment: vo.vendorAmount },
               totalOrders: { increment: 1 },
             },
@@ -466,16 +444,8 @@ export const markAsDelivered = async (req: AuthRequest, res: Response) => {
         }
       }
 
-      const totalVendorCommission = order.vendorOrders.reduce((sum, vo) => sum + vo.commissionAmount, 0);
-      
-      // Platform fee calculation
-      let totalPlatformFee = totalVendorCommission;
-      
-      if (order.paymentStatus === 'COMPLETED') {
-        // Stripe: platform gets vendor commission + rider commission (5% of shipping)
-        totalPlatformFee += riderCommission;
-      }
-      // For COD: platform only gets vendor commission (rider gets full shipping charge)
+      // Total platform fee = vendor platform fees + rider platform fee
+      const totalPlatformFee = totalVendorPlatformFee + riderPlatformFee;
       
       // Update platform balance (Admin)
       await tx.user.updateMany({
@@ -492,7 +462,7 @@ export const markAsDelivered = async (req: AuthRequest, res: Response) => {
           amount: totalPlatformFee,
           type: "PLATFORM_COMMISSION",
           userId: order.userId,
-          description: `Platform fees for order #${order.orderNumber} (Vendor: ${totalVendorCommission.toFixed(2)}${order.paymentStatus === 'COMPLETED' ? `, Rider: ${riderCommission.toFixed(2)}` : ''})`,
+          description: `Platform fees for order #${order.orderNumber} (5% from vendors & delivery: ${totalPlatformFee.toFixed(2)})`,
         },
       });
 
