@@ -259,7 +259,9 @@ import {
   EyeOff, 
   ShoppingBag, 
   Loader2,
-  ArrowRight
+  ArrowRight,
+  Github,
+  Chrome
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -274,6 +276,7 @@ function LoginContent() {
   // States
   const [isRegister, setIsRegister] = useState(searchParams.get("mode") === "register");
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   
   // Form fields
@@ -289,6 +292,61 @@ function LoginContent() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.id]: e.target.value }));
+  };
+
+  const handleSocialAuth = async (provider: "github" | "google") => {
+    setSocialLoading(provider);
+    try {
+      await signIn.social({
+        provider,
+        callbackURL: "/"
+      });
+    } catch (err: any) {
+      console.error(`${provider} Auth Error:`, err);
+      toast.error(`Failed to sign in with ${provider}. Please try again.`);
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
+  // Demo credentials
+  const demoCredentials = {
+    customer: {
+      email: "p80246079@gmail.com",
+      password: "p80246079@gmail.com",
+      label: "Demo User"
+    },
+    superAdmin: {
+      email: "irfanshazd814@gmail.com",
+      password: "irfanshazd814@gmail.com",
+      label: "Demo Super Admin"
+    },
+    admin: {
+      email: "driveintocode@gmail.com",
+      password: "driveintocode@gmail.com",
+      label: "Demo Admin"
+    },
+    vendor: {
+      email: "ishazid57@gmail.com",
+      password: "ishazid57@gmail.com",
+      label: "Demo Vendor"
+    },
+    deliveryPartner: {
+      email: "jossjossjosss62@gmail.com",
+      password: "jossjossjosss62@gmail.com",
+      label: "Demo Delivery Man"
+    }
+  };
+
+  const handleDemoLogin = (role: keyof typeof demoCredentials) => {
+    const credentials = demoCredentials[role];
+    setFormData({
+      ...formData,
+      email: credentials.email,
+      password: credentials.password
+    });
+    setIsRegister(false);
+    toast.info(`Loaded ${credentials.label} credentials. Click "Sign In" to continue.`);
   };
 
   const handleCredentialsAuth = async (e: React.FormEvent) => {
@@ -363,6 +421,61 @@ function LoginContent() {
             </div>
             <span className="text-3xl font-black mart-gradient-text tracking-tighter">GREEN MART</span>
           </Link>
+
+          {/* Demo Login Buttons Section - Top */}
+          <div className="mb-6 space-y-3">
+            <p className="text-xs text-muted-foreground text-center font-medium uppercase tracking-wider">
+              🧪 Demo Accounts (Auto-fill credentials)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs border-border/50 hover:bg-primary/5 transition-all rounded-lg"
+                onClick={() => handleDemoLogin("customer")}
+              >
+                👤 Demo User
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs border-border/50 hover:bg-primary/5 transition-all rounded-lg"
+                onClick={() => handleDemoLogin("admin")}
+              >
+                👨‍💼 Demo Admin
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs border-border/50 hover:bg-primary/5 transition-all rounded-lg"
+                onClick={() => handleDemoLogin("vendor")}
+              >
+                🏪 Demo Vendor
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs border-border/50 hover:bg-primary/5 transition-all rounded-lg"
+                onClick={() => handleDemoLogin("superAdmin")}
+              >
+                👑 Demo Super Admin
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs col-span-2 border-border/50 hover:bg-primary/5 transition-all rounded-lg"
+                onClick={() => handleDemoLogin("deliveryPartner")}
+              >
+                🚚 Demo Delivery Man
+              </Button>
+            </div>
+          </div>
+
           <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
             {isRegister ? "Start Your Journey" : "Welcome Back"}
           </h1>
@@ -458,6 +571,50 @@ function LoginContent() {
             )}
           </Button>
         </form>
+
+        {/* Divider */}
+        <div className="my-6 flex items-center gap-4">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-sm text-muted-foreground font-medium">OR</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        {/* Social Login Buttons */}
+        <div className="space-y-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-12 border-border/50 hover:bg-muted/50 transition-all rounded-xl font-semibold flex items-center justify-center gap-2"
+            onClick={() => handleSocialAuth("github")}
+            disabled={socialLoading !== null}
+          >
+            {socialLoading === "github" ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <Github className="w-5 h-5" />
+                Sign in with GitHub
+              </>
+            )}
+          </Button>
+          
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-12 border-border/50 hover:bg-muted/50 transition-all rounded-xl font-semibold flex items-center justify-center gap-2"
+            onClick={() => handleSocialAuth("google")}
+            disabled={socialLoading !== null}
+          >
+            {socialLoading === "google" ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <Chrome className="w-5 h-5" />
+                Sign in with Google
+              </>
+            )}
+          </Button>
+        </div>
 
         <div className="mt-8 text-center">
           <button

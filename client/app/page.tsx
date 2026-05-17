@@ -37,9 +37,11 @@ const item: Variants = {
 export default function HomePage() {
   const { data: session } = useSession();
   const [products, setProducts] = useState<any[]>([]);
+  const [displayedProducts, setDisplayedProducts] = useState<any[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
   const [faqs, setFAQs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [displayCount, setDisplayCount] = useState(8);
 
   useEffect(() => {
     async function load() {
@@ -49,7 +51,11 @@ export default function HomePage() {
         getFAQs(),
       ]);
 
-      if (productsRes.success) setProducts((productsRes.data || []).slice(0, 8));
+      if (productsRes.success) {
+        const allProducts = productsRes.data || [];
+        setProducts(allProducts);
+        setDisplayedProducts(allProducts.slice(0, 8));
+      }
       
       if (bannersRes.success && bannersRes.data?.length) {
         setBanners(bannersRes.data);
@@ -104,6 +110,12 @@ export default function HomePage() {
       SUPER_ADMIN: "/dashboard/super-admin",
     };
     return map[role] || "/dashboard/customer";
+  };
+
+  const handleSeeMore = () => {
+    const newCount = displayCount + 8;
+    setDisplayCount(newCount);
+    setDisplayedProducts(products.slice(0, newCount));
   };
 
   return (
@@ -234,79 +246,99 @@ export default function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {products.map((product, i) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <TiltCard>
-                    <div className="rounded-3xl border bg-card overflow-hidden hover:shadow-2xl transition-all duration-500 group relative">
-                      <div className="relative h-64 bg-muted overflow-hidden">
-                        {product.image ? (
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-emerald-50 dark:bg-emerald-950/20">
-                            <ShoppingCart className="w-16 h-16 text-primary/20" />
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {displayedProducts.map((product, i) => (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <TiltCard>
+                      <div className="rounded-3xl border bg-card overflow-hidden hover:shadow-2xl transition-all duration-500 group relative">
+                        <div className="relative h-64 bg-muted overflow-hidden">
+                          {product.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-emerald-50 dark:bg-emerald-950/20">
+                              <ShoppingCart className="w-16 h-16 text-primary/20" />
+                            </div>
+                          )}
+                          {Boolean(product.discountPrice) && (
+                            <div className="absolute top-4 left-4">
+                              <Badge className="bg-red-500 text-white border-none px-3 py-1 text-xs font-bold rounded-full">
+                                SAVE {(100 - (product.discountPrice / product.price) * 100).toFixed(0)}%
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-6 space-y-4">
+                          <div className="space-y-1">
+                            <h3 className="text-xl font-bold line-clamp-1">{product.name}</h3>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1.5 font-medium">
+                              <Store className="w-3.5 h-3.5" />
+                              {product.vendor?.shopName || "Green Mart Vendor"}
+                            </p>
                           </div>
-                        )}
-                        {Boolean(product.discountPrice) && (
-                          <div className="absolute top-4 left-4">
-                            <Badge className="bg-red-500 text-white border-none px-3 py-1 text-xs font-bold rounded-full">
-                              SAVE {(100 - (product.discountPrice / product.price) * 100).toFixed(0)}%
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-amber-500 font-bold">
+                              <Star className="w-4 h-4 fill-current" />
+                              {product.rating?.toFixed(1) || "5.0"}
+                            </div>
+                            <Badge variant="secondary" className="bg-primary/10 text-primary border-none rounded-full">
+                              {product.category}
                             </Badge>
                           </div>
-                        )}
-                      </div>
-                      <div className="p-6 space-y-4">
-                        <div className="space-y-1">
-                          <h3 className="text-xl font-bold line-clamp-1">{product.name}</h3>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1.5 font-medium">
-                            <Store className="w-3.5 h-3.5" />
-                            {product.vendor?.shopName || "Green Mart Vendor"}
-                          </p>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 text-amber-500 font-bold">
-                            <Star className="w-4 h-4 fill-current" />
-                            {product.rating?.toFixed(1) || "5.0"}
-                          </div>
-                          <Badge variant="secondary" className="bg-primary/10 text-primary border-none rounded-full">
-                            {product.category}
-                          </Badge>
-                        </div>
 
-                        <div className="flex items-center justify-between pt-2">
-                          <div className="flex flex-col">
-                            {product.discountPrice ? (
-                              <>
-                                <span className="text-2xl font-black text-primary">{formatCurrency(product.discountPrice)}</span>
-                                <span className="text-sm text-muted-foreground line-through decoration-red-500/50">{formatCurrency(product.price)}</span>
-                              </>
-                            ) : (
-                              <span className="text-2xl font-black">{formatCurrency(product.price)}</span>
-                            )}
+                          <div className="flex items-center justify-between pt-2">
+                            <div className="flex flex-col">
+                              {product.discountPrice ? (
+                                <>
+                                  <span className="text-2xl font-black text-primary">{formatCurrency(product.discountPrice)}</span>
+                                  <span className="text-sm text-muted-foreground line-through decoration-red-500/50">{formatCurrency(product.price)}</span>
+                                </>
+                              ) : (
+                                <span className="text-2xl font-black">{formatCurrency(product.price)}</span>
+                              )}
+                            </div>
+                            <Link href="/shop">
+                              <Button variant="gradient" className="rounded-full w-12 h-12 p-0 shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform">
+                                <ShoppingCart className="w-5 h-5" />
+                              </Button>
+                            </Link>
                           </div>
-                          <Link href="/shop">
-                            <Button variant="gradient" className="rounded-full w-12 h-12 p-0 shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform">
-                              <ShoppingCart className="w-5 h-5" />
-                            </Button>
-                          </Link>
                         </div>
                       </div>
-                    </div>
-                  </TiltCard>
+                    </TiltCard>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* See More Button */}
+              {displayedProducts.length < products.length && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="flex justify-center mt-16"
+                >
+                  <Button
+                    onClick={handleSeeMore}
+                    size="lg"
+                    className="px-12 h-14 text-lg font-bold rounded-full bg-gradient-to-r mart-gradient-bg text-white shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all"
+                  >
+                    See More Products <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
                 </motion.div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </section>

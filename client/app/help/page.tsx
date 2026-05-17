@@ -3,12 +3,24 @@ import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { PageTransition, GlassCard } from "@/components/shared/mart-ui";
 import { getHelpEntries } from "@/app/actions/mart-actions";
-import { Search, HelpCircle, Book, MessageCircle, ArrowRight } from "lucide-react";
+import { Search, HelpCircle, Book, MessageCircle, ArrowRight, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
-export default async function HelpPage() {
-  const res = await getHelpEntries();
-  const entries = res.success ? res.data : [];
+function HelpContent({ initialEntries }: { initialEntries: any[] }) {
+  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
+  const [entries] = React.useState(initialEntries);
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
 
   // Group by category
   const categories = entries.reduce((acc: any, entry: any) => {
@@ -70,14 +82,36 @@ export default async function HelpPage() {
                   {cat}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {categories[cat].map((entry: any) => (
-                    <div key={entry.id} className="p-6 rounded-2xl border border-border hover:bg-muted/50 transition-colors group cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold group-hover:text-primary transition-colors">{entry.title}</h4>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                  {categories[cat].map((entry: any) => {
+                    const isExpanded = expandedIds.has(entry.id);
+                    return (
+                      <div
+                        key={entry.id}
+                        onClick={() => toggleExpand(entry.id)}
+                        className="p-6 rounded-2xl border border-border hover:bg-muted/50 transition-all duration-300 group cursor-pointer overflow-hidden"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 pr-4">
+                            <h4 className="font-semibold group-hover:text-primary transition-colors">{entry.title}</h4>
+                          </div>
+                          <ChevronDown
+                            className={`w-5 h-5 text-muted-foreground group-hover:text-primary transition-transform duration-300 flex-shrink-0 ${
+                              isExpanded ? "rotate-180" : ""
+                            }`}
+                          />
+                        </div>
+
+                        {/* Answer Section */}
+                        {isExpanded && entry.content && (
+                          <div className="mt-4 pt-4 border-t border-border/50 animate-in fade-in slide-in-from-top-2">
+                            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                              {entry.content}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -87,4 +121,11 @@ export default async function HelpPage() {
       <Footer />
     </div>
   );
+}
+
+export default async function HelpPage() {
+  const res = await getHelpEntries();
+  const entries = res.success ? res.data : [];
+
+  return <HelpContent initialEntries={entries} />;
 }

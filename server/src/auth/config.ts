@@ -127,6 +127,12 @@ export const auth = betterAuth({
     },
   },
 
+  callbacks: {
+    async authorized(request: any) {
+      return true;
+    },
+  },
+
   advanced: {
     cookies: {
       session_token: {

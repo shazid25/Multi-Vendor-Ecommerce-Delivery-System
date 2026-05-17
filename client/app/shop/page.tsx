@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, ShoppingCart, Star, Filter } from "lucide-react";
+import { Search, ShoppingCart, Star, Filter, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +15,12 @@ import { useCart } from "@/lib/cart-store";
 import Link from "next/link";
 
 export default function ShopPage() {
-  const [products, setProducts] = useState<Record<string, unknown>[]>([]);
+  const [allProducts, setAllProducts] = useState<Record<string, unknown>[]>([]);
+  const [displayedProducts, setDisplayedProducts] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
+  const [displayCount, setDisplayCount] = useState(8);
   const { addItem } = useCart();
 
   useEffect(() => {
@@ -27,8 +29,13 @@ export default function ShopPage() {
 
   async function loadProducts() {
     setLoading(true);
+    setDisplayCount(8); // Reset display count on new search/filter
     const result = await getProducts({ search: search || undefined, category: category || undefined });
-    if (result.success) setProducts((result.data || []) as Record<string, unknown>[]);
+    if (result.success) {
+      const allProds = (result.data || []) as Record<string, unknown>[];
+      setAllProducts(allProds);
+      setDisplayedProducts(allProds.slice(0, 8));
+    }
     else toast.error("Failed to load products");
     setLoading(false);
   }
@@ -50,7 +57,13 @@ export default function ShopPage() {
     loadProducts();
   };
 
-  const categories = [...new Set(products.map((p) => p.category as string))].filter(Boolean);
+  const handleSeeMore = () => {
+    const newCount = displayCount + 8;
+    setDisplayCount(newCount);
+    setDisplayedProducts(allProducts.slice(0, newCount));
+  };
+
+  const categories = [...new Set(allProducts.map((p) => p.category as string))].filter(Boolean);
 
   return (
     <PageTransition>
@@ -128,114 +141,134 @@ export default function ShopPage() {
                 </div>
               ))}
             </div>
-          ) : products.length === 0 ? (
+          ) : displayedProducts.length === 0 ? (
             <div className="text-center py-20">
               <ShoppingCart className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-40" />
               <h2 className="text-xl font-semibold mb-2">No products found</h2>
               <p className="text-muted-foreground">Check back later for new arrivals</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product, i) => {
-                const vendor = product.vendor as Record<string, unknown>;
-                const vendorUser = vendor?.user as Record<string, unknown>;
-                return (
-                  <motion.div
-                    key={product.id as string}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                  >
-                    <TiltCard>
-                      <div className="rounded-2xl border bg-card overflow-hidden hover:shadow-xl transition-shadow duration-300 group">
-                        {/* Image */}
-                        <div className="relative h-48 bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
-                          {product.image ? (
-                            <img
-                              src={product.image as string}
-                              alt={product.name as string}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <ShoppingCart className="w-12 h-12 text-muted-foreground/30" />
-                            </div>
-                          )}
-                          {Boolean(product.discountPrice) && (
-                            <Badge className="absolute top-3 right-3 bg-red-500">
-                              SALE
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Content */}
-                        <div className="p-4 space-y-3">
-                          <div>
-                            <h3 className="font-semibold line-clamp-1">{product.name as string}</h3>
-                            <p className="text-xs text-muted-foreground">
-                              by {vendorUser?.name as string || "Unknown"}
-                            </p>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {displayedProducts.map((product, i) => {
+                  const vendor = product.vendor as Record<string, unknown>;
+                  const vendorUser = vendor?.user as Record<string, unknown>;
+                  return (
+                    <motion.div
+                      key={product.id as string}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                    >
+                      <TiltCard>
+                        <div className="rounded-2xl border bg-card overflow-hidden hover:shadow-xl transition-shadow duration-300 group">
+                          {/* Image */}
+                          <div className="relative h-48 bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
+                            {product.image ? (
+                              <img
+                                src={product.image as string}
+                                alt={product.name as string}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <ShoppingCart className="w-12 h-12 text-muted-foreground/30" />
+                              </div>
+                            )}
+                            {Boolean(product.discountPrice) && (
+                              <Badge className="absolute top-3 right-3 bg-red-500">
+                                SALE
+                              </Badge>
+                            )}
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {product.category as string}
-                            </Badge>
-                            <div className="flex items-center gap-1 text-xs text-amber-500">
-                              <Star className="w-3 h-3 fill-current" />
-                              {(product.rating as number)?.toFixed(1) || "0.0"}
+                          {/* Content */}
+                          <div className="p-4 space-y-3">
+                            <div>
+                              <h3 className="font-semibold line-clamp-1">{product.name as string}</h3>
+                              <p className="text-xs text-muted-foreground">
+                                by {vendorUser?.name as string || "Unknown"}
+                              </p>
                             </div>
-                          </div>
 
-                          <div className="flex items-center justify-between">
-                            <div className="flex flex-col">
-                              {product.discountPrice ? (
-                                <div className="flex items-baseline gap-1">
-                                  <span className="text-lg font-bold mart-gradient-text">
-                                    {formatCurrency(product.discountPrice as number)}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground line-through">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {product.category as string}
+                              </Badge>
+                              <div className="flex items-center gap-1 text-xs text-amber-500">
+                                <Star className="w-3 h-3 fill-current" />
+                                {(product.rating as number)?.toFixed(1) || "0.0"}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <div className="flex flex-col">
+                                {product.discountPrice ? (
+                                  <div className="flex items-baseline gap-1">
+                                    <span className="text-lg font-bold mart-gradient-text">
+                                      {formatCurrency(product.discountPrice as number)}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground line-through">
+                                      {formatCurrency(product.price as number)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-lg font-bold">
                                     {formatCurrency(product.price as number)}
                                   </span>
-                                </div>
-                              ) : (
-                                <span className="text-lg font-bold">
-                                  {formatCurrency(product.price as number)}
+                                )}
+                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
+                                  per {product.unitValue as number}{product.unit as string}
                                 </span>
-                              )}
-                              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
-                                per {product.unitValue as number}{product.unit as string}
+                              </div>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${(product.stock as number) > 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"}`}>
+                                {(product.stock as number) > 0 ? `${product.stock} available` : "Out of stock"}
                               </span>
                             </div>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${(product.stock as number) > 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"}`}>
-                              {(product.stock as number) > 0 ? `${product.stock} available` : "Out of stock"}
-                            </span>
-                          </div>
 
-                          <div className="flex gap-2 pt-1">
-                            <Link href={`/shop/${product.id}`} className="flex-1">
-                              <Button variant="outline" className="w-full" size="sm">
-                                Details
+                            <div className="flex gap-2 pt-1">
+                              <Link href={`/shop/${product.id}`} className="flex-1">
+                                <Button variant="outline" className="w-full" size="sm">
+                                  Details
+                                </Button>
+                              </Link>
+                              <Button
+                                variant="gradient"
+                                className="flex-1"
+                                size="sm"
+                                disabled={(product.stock as number) <= 0}
+                                onClick={() => handleAddToCart(product)}
+                              >
+                                <ShoppingCart className="w-4 h-4 mr-2" />
+                                Add
                               </Button>
-                            </Link>
-                            <Button
-                              variant="gradient"
-                              className="flex-1"
-                              size="sm"
-                              disabled={(product.stock as number) <= 0}
-                              onClick={() => handleAddToCart(product)}
-                            >
-                              <ShoppingCart className="w-4 h-4 mr-2" />
-                              Add
-                            </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TiltCard>
-                  </motion.div>
-                );
-              })}
-            </div>
+                      </TiltCard>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* See More Button */}
+              {displayedProducts.length < allProducts.length && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="flex justify-center mt-12"
+                >
+                  <Button
+                    onClick={handleSeeMore}
+                    size="lg"
+                    className="px-12 h-14 text-lg font-bold rounded-full bg-gradient-to-r mart-gradient-bg text-white shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all"
+                  >
+                    Load More Products <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </motion.div>
+              )}
+            </>
           )}
         </div>
       </div>
